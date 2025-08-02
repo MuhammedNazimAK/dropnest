@@ -10,13 +10,14 @@ import { signUpSchema } from "@/schemas/signUpSchema"
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useRouter } from "next/navigation"
+import { z } from "zod";
 
 
 export default function SignUpForm() {
   const router = useRouter();
   const [verifying, setVerifying] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [verificationCode, setVerificationCode] = useState(false);
+  const [verificationCode, setVerificationCode] = useState<string>("");
 
   const [authError, setAuthError] =  useState<string | null>(null);
   const [verificationError, setVerificationError] = useState<string | null>(null)
@@ -25,7 +26,7 @@ export default function SignUpForm() {
   const {
     register,
     handleSubmit,
-    formstate: { errors },
+    formState: { errors },
 
   } = useForm<z.infer<typeof signUpSchema>>({
     resolver: zodResolver(signUpSchema),
@@ -50,10 +51,10 @@ export default function SignUpForm() {
         strategy: "email_code"
       })
       setVerifying(true);
-    } catch (error: any) {
-      console.error("Signup error: ", error);
+    } catch (error: unknown) {
+      if (error instanceof Error)
       setAuthError(
-        error.errors?.[0]?.message || "An error occured during the signup. please try again"
+        error.message || "An error occured during the signup. please try again"
       )
     } finally {
       setIsSubmitting(false)
@@ -84,10 +85,10 @@ export default function SignUpForm() {
           )
         }
 
-      } catch (error: any) {
-        console.error("Verification incomplete", error);
+      } catch (error: unknown) {
+        if (error instanceof Error)
         setVerificationError(
-        error.errors?.[0]?.message || "An error occured during the signup. please try again"
+        error.message || "An error occured during the signup. please try again"
       )
       } finally {
         setIsSubmitting(false);
@@ -132,7 +133,7 @@ export default function SignUpForm() {
           className="text-blue-600 font-medium hover:underline"
           onClick={async () => {
             try {
-              await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+              await signUp?.prepareEmailAddressVerification({ strategy: "email_code" });
               alert("A new code has been sent to your email.");
             } catch (err) {
               console.error("Resend failed:", err);
@@ -144,6 +145,24 @@ export default function SignUpForm() {
     </button>
   </p>
       </form>
+
+          <div className="mt-6 text-center">
+            <p className="text-sm text-default-500">
+              Didn&apos;t recive a code?{" "}
+              <button
+              onClick={async () => {
+                if (signUp) {
+                  await signUp.prepareEmailAddressVerification({
+                    strategy: "email_code",
+                  });
+                }
+              }}
+              className="text-primary hover:underline font-medium"
+              >
+                Resend code
+              </button>
+            </p>
+          </div>
     </CardBody>
   </Card>
 )
@@ -207,5 +226,8 @@ export default function SignUpForm() {
       </form>
     </CardBody>
   </Card>
+
+
+
 )
 }
