@@ -16,6 +16,9 @@ export const files = pgTable("files", {
   fileUrl: text("file_url").notNull(),
   thumbnailUrl: text("thumbnail_url"),
 
+  //Essential for delete from imagekit
+  fileIdInImageKit: text("file_id_imagekit"),
+
   // Ownership
   userId: text("user_id").notNull(),
   parentId: uuid("parent_id"), // Parent folder id (null for root items)
