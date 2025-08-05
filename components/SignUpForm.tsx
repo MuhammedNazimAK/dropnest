@@ -73,7 +73,7 @@ export default function SignUpForm() {
         const result = await signUp.attemptEmailAddressVerification({
           code: verificationCode
         })
-        //todo: console result
+
         if (result.status === "complete") {
           await setActive({session: result.
             createdSessionId})

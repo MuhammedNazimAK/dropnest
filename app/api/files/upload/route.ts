@@ -28,14 +28,7 @@ export async function POST(request: NextRequest) {
         // parse form data
         const formData = await request.formData();
         const file = formData.get("file") as File
-        const formUserId = formData.get("userId") as string
         const parentId = formData.get("parentId") as string || null
-
-        if (formUserId !== userId) {
-          return NextResponse.json({ error: "Unauthorized" },
-            { status: 401 }
-          )
-        }
 
         if (!file) {
           return NextResponse.json({error: "No file provided"},
@@ -61,7 +54,7 @@ export async function POST(request: NextRequest) {
 
         if (!file.type.startsWith("image/") && file.type !== "application/pdf") {
           return NextResponse.json({error: "only image and pdf are supported"},
-            {status: 401}
+            {status: 415}
           )
         }
 
