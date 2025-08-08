@@ -15,9 +15,9 @@ interface DashboardClientProps {
   userId: string;
 }
 
-const DashboardClient: React.FC<DashboardClientProps> = ({ 
-  initialFiles, 
-  userId 
+const DashboardClient: React.FC<DashboardClientProps> = ({
+  initialFiles,
+  userId
 }) => {
   // UI State
   const [activeTab, setActiveTab] = useState('files');
@@ -30,6 +30,7 @@ const DashboardClient: React.FC<DashboardClientProps> = ({
   const {
     files,
     isUploading,
+    uploadProgress,
     handleFileUpload,
     toggleStar,
     moveToTrash,
@@ -39,20 +40,19 @@ const DashboardClient: React.FC<DashboardClientProps> = ({
 
   // Filter files based on view and search
   const filteredFiles = files.filter(file => {
-    // Filter by view type
+
     if (activeFileView === 'starred') return file.isStarred && !file.isTrash;
     if (activeFileView === 'trash') return file.isTrash;
     if (activeFileView === 'all') return !file.isTrash;
     return true;
-  }).filter(file => 
-    // Filter by search query
+  }).filter(file =>
+
     file.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
-    <div className={`min-h-screen transition-colors duration-200 ${
-      isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'
-    }`}>
+    <div className={`min-h-screen transition-colors duration-200 ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'
+      }`}>
       {/* Header */}
       <DashboardHeader
         activeTab={activeTab}
@@ -70,6 +70,7 @@ const DashboardClient: React.FC<DashboardClientProps> = ({
               <FileUploadZone
                 onFileUpload={handleFileUpload}
                 isUploading={isUploading}
+                uploadProgress={uploadProgress}
                 isDarkMode={isDarkMode}
               />
               <FileCategoryTabs
