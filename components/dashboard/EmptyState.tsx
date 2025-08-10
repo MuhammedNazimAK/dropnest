@@ -6,6 +6,7 @@ import { File } from 'lucide-react';
 interface EmptyStateProps {
   searchQuery: string;
   activeFileView: string;
+  currentFolderId?: string | null;
 }
 
 const EmptyState: React.FC<EmptyStateProps> = ({ searchQuery, activeFileView }) => {

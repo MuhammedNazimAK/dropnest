@@ -6,9 +6,12 @@ if (!process.env.DATABASE_URL) {
   throw new Error("Database url is not set up in .env.local index file")
 }
 
-
+console.log('database url', process.env.DATABASE_URL);
 
 const sql = neon(process.env.DATABASE_URL!);
 
-export const db = drizzle(sql, ({ schema }));
+export const db = drizzle(sql, ({
+  schema,
+  logger: true
+}));
 

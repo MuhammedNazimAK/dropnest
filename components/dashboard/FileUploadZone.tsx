@@ -8,6 +8,7 @@ interface FileUploadZoneProps {
   isUploading: boolean;
   uploadProgress: number;
   isDarkMode: boolean;
+  currentFolderId: string | null;
 }
 
 const FileUploadZone: React.FC<FileUploadZoneProps> = ({ 

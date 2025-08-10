@@ -1,5 +1,8 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
+import { useNotification } from '@/contexts/NotificationContext';
 import type { NewFile } from '@/lib/db/schema';
+import { fi } from 'zod/v4/locales';
+
 
 interface FileUploadResponse {
   success: boolean;
@@ -18,8 +21,6 @@ interface FileManagementState {
   isUploading: boolean;
   isOperating: boolean;
   uploadProgress: number;
-  error: string | null;
-  success: string | null;
 }
 
 export const useFileManagement = (initialFiles: NewFile[], userId: string) => {
@@ -28,20 +29,13 @@ export const useFileManagement = (initialFiles: NewFile[], userId: string) => {
     isUploading: false,
     isOperating: false,
     uploadProgress: 0,
-    error: null,
-    success: null
   });
 
-  // Clear messages after timeout
-  const clearMessages = () => {
-    setTimeout(() => {
-      setState(prev => ({ ...prev, error: null, success: null }));
-    }, 5000);
-  };
+  const { showNotification } = useNotification();
 
   const handleFileUpload = async (uploadFiles: FileList) => {
-    setState(prev => ({ ...prev, isUploading: true, error: null, success: null, uploadProgress: 0 }));
-    
+    setState(prev => ({ ...prev, isUploading: true, uploadProgress: 0 }));
+
     try {
       const formData = new FormData();
       Array.from(uploadFiles).forEach(file => {
@@ -62,40 +56,35 @@ export const useFileManagement = (initialFiles: NewFile[], userId: string) => {
 
       if (data.success && data.uploadedFiles) {
         setFiles(prev => [...prev, ...data.uploadedFiles]);
-        setState(prev => ({ 
-          ...prev, 
-          success: data.message,
-          uploadProgress: 100 
-        }));
+        setState(prev => ({ ...prev, uploadProgress: 100 }));
+
+        const uploadedCount = data.uploadedFiles.length;
+        showNotification('success', `Successfully uploaded ${uploadedCount} file${uploadedCount !== 1 ? 's' : ''}`);
 
         // Show warnings if there were any errors
         if (data.errors && data.errors.length > 0) {
-          setState(prev => ({ 
-            ...prev, 
-            error: `Some files failed: ${data.errors?.join(', ')}` 
-          }));
+          showNotification('warning', `Some files failed to upload: ${data.errors.join(', ')}`);
         }
       }
     } catch (error) {
       console.error('Upload failed:', error);
-      setState(prev => ({ 
-        ...prev, 
-        error: error instanceof Error ? error.message : 'Upload failed' 
-      }));
+      showNotification('error', error instanceof Error ? error.message : 'Upload failed');
     } finally {
       setState(prev => ({ ...prev, isUploading: false }));
-      clearMessages();
     }
   };
 
   const toggleStar = async (fileId: string) => {
-    setState(prev => ({ ...prev, isOperating: true, error: null }));
+    setState(prev => ({ ...prev, isOperating: true }));
 
     console.log("came to toggle")
 
     // Optimistic update
     const previousFiles = [...files];
-    setFiles(files.map(file => 
+    const targetFile = files.find(file => file.id === fileId);
+    const isStarring = !targetFile?.isStarred;
+
+    setFiles(prevFiles => prevFiles.map(file =>
       file.id === fileId ? { ...file, isStarred: !file.isStarred } : file
     ));
 
@@ -112,32 +101,32 @@ export const useFileManagement = (initialFiles: NewFile[], userId: string) => {
         throw new Error(data.message || 'Failed to update file');
       }
 
+      showNotification('success', isStarring ? 'File starred' : 'File unstarred');
+
       // Update with server response
-      setFiles(files.map(file => 
+      setFiles(prevFiles => prevFiles.map(file =>
         file.id === fileId ? data.file : file
       ));
 
-      setState(prev => ({ ...prev, success: data.message }));
     } catch (error) {
       // Revert optimistic update
       setFiles(previousFiles);
       console.error('Failed to toggle star:', error);
-      setState(prev => ({ 
-        ...prev, 
-        error: error instanceof Error ? error.message : 'Failed to update file' 
+      setState(prev => ({
+        ...prev,
+        error: error instanceof Error ? error.message : 'Failed to update file'
       }));
     } finally {
       setState(prev => ({ ...prev, isOperating: false }));
-      clearMessages();
     }
   };
 
   const moveToTrash = async (fileId: string) => {
-    setState(prev => ({ ...prev, isOperating: true, error: null }));
+    setState(prev => ({ ...prev, isOperating: true }));
 
     // Optimistic update
     const previousFiles = [...files];
-    setFiles(files.map(file => 
+    setFiles(prevFiles => prevFiles.map(file =>
       file.id === fileId ? { ...file, isTrash: true } : file
     ));
 
@@ -154,32 +143,31 @@ export const useFileManagement = (initialFiles: NewFile[], userId: string) => {
         throw new Error(data.message || 'Failed to move to trash');
       }
 
+      showNotification('success', 'File trashed');
+
       // Update with server response
-      setFiles(files.map(file => 
+      setFiles(prevFiles => prevFiles.map(file =>
         file.id === fileId ? data.file : file
       ));
 
-      setState(prev => ({ ...prev, success: data.message }));
+
     } catch (error) {
       // Revert optimistic update
       setFiles(previousFiles);
       console.error('Failed to move to trash:', error);
-      setState(prev => ({ 
-        ...prev, 
-        error: error instanceof Error ? error.message : 'Failed to move to trash' 
-      }));
+      showNotification('error', error instanceof Error ? error.message : 'Failed to trash file');
+
     } finally {
       setState(prev => ({ ...prev, isOperating: false }));
-      clearMessages();
     }
   };
 
   const restoreFile = async (fileId: string) => {
-    setState(prev => ({ ...prev, isOperating: true, error: null }));
+    setState(prev => ({ ...prev, isOperating: true }));
 
     // Optimistic update
     const previousFiles = [...files];
-    setFiles(files.map(file => 
+    setFiles(prevFiles => prevFiles.map(file =>
       file.id === fileId ? { ...file, isTrash: false } : file
     ));
 
@@ -196,28 +184,27 @@ export const useFileManagement = (initialFiles: NewFile[], userId: string) => {
         throw new Error(data.message || 'Failed to restore file');
       }
 
+      showNotification('success', 'File restored');
+
       // Update with server response
-      setFiles(files.map(file => 
+      setFiles(prevFiles => prevFiles.map(file =>
         file.id === fileId ? data.file : file
       ));
 
-      setState(prev => ({ ...prev, success: data.message }));
+
     } catch (error) {
       // Revert optimistic update
       setFiles(previousFiles);
       console.error('Failed to restore file:', error);
-      setState(prev => ({ 
-        ...prev, 
-        error: error instanceof Error ? error.message : 'Failed to restore file' 
-      }));
+      showNotification('error', error instanceof Error ? error.message : 'Failed to restore file');
+
     } finally {
       setState(prev => ({ ...prev, isOperating: false }));
-      clearMessages();
     }
   };
 
   const emptyTrash = async () => {
-    setState(prev => ({ ...prev, isOperating: true, error: null }));
+    setState(prev => ({ ...prev, isOperating: true }));
 
     try {
       const response = await fetch('/api/files/empty-trash', {
@@ -232,19 +219,75 @@ export const useFileManagement = (initialFiles: NewFile[], userId: string) => {
         throw new Error(data.message || 'Failed to empty trash');
       }
 
+      showNotification('success', 'Trash emptied successfully');
+
       setFiles(files.filter(file => !file.isTrash));
-      setState(prev => ({ ...prev, success: data.message || 'Trash emptied successfully' }));
+
     } catch (error) {
       console.error('Failed to empty trash:', error);
-      setState(prev => ({ 
-        ...prev, 
-        error: error instanceof Error ? error.message : 'Failed to empty trash' 
-      }));
+      showNotification('error', error instanceof Error ? error.message : 'Failed to empty trash');
+
     } finally {
       setState(prev => ({ ...prev, isOperating: false }));
-      clearMessages();
     }
   };
+
+
+  const deleteFilePermanently = async (fileId: string) => {
+    setState(prev => ({ ...prev, isOperating: true }));
+
+    // Optimistic update - remove file immediately
+    const previousFiles = [...files];
+    setFiles(prevFiles => prevFiles.filter(file => file.id !== fileId));
+
+    console.log("file id for delete", fileId)
+
+    try {
+      const response = await fetch(`/api/files/${fileId}/delete`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const data = await response.json();
+
+      console.log("deleted data", data)
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to delete file permanently');
+      }
+
+      showNotification('success', 'File deleted permanently');
+
+      // File is already removed from optimistic update, no need to update again
+
+    } catch (error) {
+      // Revert optimistic update
+      setFiles(previousFiles);
+      console.error('Failed to delete file permanently:', error);
+      showNotification('error', error instanceof Error ? error.message : 'Failed to delete file');
+
+    } finally {
+      setState(prev => ({ ...prev, isOperating: false }));
+    }
+  };
+
+
+  const refreshFiles = useCallback(async (folderId?: string | null) => {
+    try {
+
+      const response = await fetch(`/api/files?folderId=${folderId || ''}`);
+      if (response.ok) {
+        const data = await response.json();
+        setFiles(data.files || []);
+      }
+
+    } catch (error) {
+      console.error('Failed to refresh files:', error);
+      showNotification('error', 'Failed to refresh files');
+    }
+  }, [showNotification]);
+
+  
 
   return {
     files,
@@ -253,6 +296,8 @@ export const useFileManagement = (initialFiles: NewFile[], userId: string) => {
     toggleStar,
     moveToTrash,
     restoreFile,
-    emptyTrash
+    emptyTrash,
+    deleteFilePermanently,
+    refreshFiles
   };
 };

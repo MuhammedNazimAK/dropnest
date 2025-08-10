@@ -29,6 +29,8 @@ export async function DELETE(request: NextRequest, props: { params: Promise<{ fi
       )
     }
 
+    console.log("passed file id check")
+
     const [file] = await db.select().from(files).where(
       and(
         eq(files.id, fileId),
