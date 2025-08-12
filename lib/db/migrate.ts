@@ -1,7 +1,7 @@
 import { migrate } from "drizzle-orm/neon-http/migrator";
 import { drizzle } from "drizzle-orm/neon-http";
 import { neon } from "@neondatabase/serverless";
-
+import 'dotenv/config';
 
 
 console.log("database url", process.env.DATABASE_URL)

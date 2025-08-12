@@ -1,35 +1,35 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import type { File } from '@/lib/db/schema';
-import DashboardHeader from '@/components/dashboard/DashboardHeader';
-import FileUploadZone from '@/components/dashboard/FileUploadZone';
-import FileCategoryTabs from '@/components/dashboard/FileCategoryTabs';
-import FileManagementControls from '@/components/dashboard/FileManagementControls';
-import UserProfile from '@/components/dashboard/UserProfile';
+
 import { useFileManagement } from '@/hooks/useFileManagement';
 import { useFolderManagement } from '@/hooks/useFolderManagement';
-import FileDisplay from '@/components/dashboard/FileDisplay';
-import { FolderOperationsPanel } from '@/components/dashboard/FolderOperationsPanel';
 
+import { Sidebar } from '@/components/dashboard/layout/Sidebar';
+import { Header } from '@/components/dashboard/layout/Header';
+import { MainContent } from '@/components/dashboard/layout/MainContent';
+import { FileView } from '@/components/dashboard/views/FileView';
+import { UploadModal } from '@/components/dashboard/upload/UploadModal';
 
 interface DashboardClientProps {
   initialFiles: File[];
   userId: string;
 }
 
-const DashboardClient: React.FC<DashboardClientProps> = ({
-  initialFiles,
-  userId
-}) => {
-  // UI State
-  const [activeTab, setActiveTab] = useState('files');
-  const [activeFileView, setActiveFileView] = useState('all');
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const [viewMode, setViewMode] = useState('grid');
-  const [searchQuery, setSearchQuery] = useState('');
+const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId }) => {
+  // --- STATE MANAGEMENT ---
 
-  // File Management
+  // UI State
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'starred' | 'trash'>('all');
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+
+  // --- DATA HOOKS ---
+
+  // File Management Hook
   const {
     files,
     isUploading,
@@ -40,121 +40,139 @@ const DashboardClient: React.FC<DashboardClientProps> = ({
     restoreFile,
     emptyTrash,
     deleteFilePermanently,
+    renameItem,
     refreshFiles
   } = useFileManagement(initialFiles, userId);
 
-  // Folder Management
+  // Folder Management Hook
   const {
     currentFolderId,
     breadcrumbs,
     navigateToFolder,
     navigateToBreadcrumb,
     createFolder,
-    renameFolder,
     deleteFolder,
-    moveFile
-  } = useFolderManagement();
+    moveFile,
+  } = useFolderManagement(); // Pass files to the hook if it needs them
 
-  // Filter files based on current folder, view and search
-  const filteredFiles = files.filter(file => {
-    // Filter by current folder first
-    if (file.parentId !== currentFolderId) return false;
-    
-    // Then apply view filters
-    if (activeFileView === 'starred') return file.isStarred && !file.isTrash;
-    if (activeFileView === 'trash') return file.isTrash;
-    if (activeFileView === 'all') return !file.isTrash;
-    return true;
-  }).filter(file =>
-    file.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // --- DERIVED STATE & MEMOIZATION ---
 
-  // Handle folder double-click navigation
+  // Memoize the filtered files to prevent re-calculating on every render
+  const filteredFiles = useMemo(() => {
+    return files
+      .filter(file => {
+        // First, filter by the active folder
+        const inCurrentFolder = file.parentId === currentFolderId;
+        if (!inCurrentFolder) return false;
+
+        // Then, apply the active filter ('all', 'starred', 'trash')
+        switch (activeFilter) {
+          case 'starred':
+            return file.isStarred && !file.isTrash;
+          case 'trash':
+            return file.isTrash;
+          case 'all':
+          default:
+            return !file.isTrash;
+        }
+      })
+      // Finally, filter by the search query
+      .filter(file => file.name.toLowerCase().includes(searchQuery.toLowerCase()));
+  }, [files, currentFolderId, activeFilter, searchQuery]);
+
+
+  // --- EVENT HANDLERS ---
+
+  // Handler for opening a folder
   const handleFolderOpen = (folder: File) => {
     if (folder.isFolder) {
       navigateToFolder(folder.id, folder.name);
     }
   };
 
-  // Handle file refresh after folder operations
-  const handleFolderCreated = () => {
-    refreshFiles(currentFolderId);
+  // Handler for refreshing files after a folder operation
+  const handleFolderAction = async () => {
+    await refreshFiles(currentFolderId);
   };
+  
+  // Handler for file uploads from the modal
+  const handleModalFileUpload = (filesToUpload: FileList) => {
+      handleFileUpload(filesToUpload, currentFolderId);
+      // Close the modal after upload starts
+      setIsUploadModalOpen(false);
+  }
+
+  // Effect to apply dark mode class to the body
+  useEffect(() => {
+    const body = window.document.body;
+    if (isDarkMode) {
+      body.classList.add('dark');
+    } else {
+      body.classList.remove('dark');
+    }
+  }, [isDarkMode]);
+
+  useEffect(() => {
+    refreshFiles(currentFolderId);
+  }, [currentFolderId, refreshFiles]);
+
+  // --- RENDER ---
 
   return (
-    <div className={`min-h-screen transition-colors duration-200 ${
-      isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'
+    <div className={`flex h-screen transition-colors duration-200 ${
+      isDarkMode ? 'bg-gray-900 text-white' : 'bg-white text-gray-800'
     }`}>
-      {/* Header */}
-      <DashboardHeader
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        isDarkMode={isDarkMode}
-        setIsDarkMode={setIsDarkMode}
+      {/* ===== PERSISTENT SIDEBAR ===== */}
+      <Sidebar
+        activeFilter={activeFilter}
+        setActiveFilter={setActiveFilter}
+        onFolderCreated={handleFolderAction}
+        onUploadClick={() => setIsUploadModalOpen(true)}
+        createFolder={createFolder}
+        currentFolderId={currentFolderId}
+        files={files}
       />
+      
+      <div className="flex flex-col flex-1 w-full overflow-hidden">
+        {/* ===== TOP HEADER ===== */}
+        <Header
+          breadcrumbs={breadcrumbs}
+          onNavigateToBreadcrumb={navigateToBreadcrumb}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          viewMode={viewMode}
+          setViewMode={setViewMode}
+          isDarkMode={isDarkMode}
+          setIsDarkMode={setIsDarkMode}
+        />
+        
+        {/* ===== MAIN CONTENT AREA ===== */}
+        <MainContent>
+          <FileView
+            files={filteredFiles as Required<File>[]}
+            viewMode={viewMode}
+            activeFilter={activeFilter}
+            onToggleStar={toggleStar}
+            onMoveToTrash={moveToTrash}
+            onFolderOpen={handleFolderOpen}
+            onRestoreFile={restoreFile}
+            onDeletePermanently={deleteFilePermanently}
+            onRename={renameItem}
+            onMove={moveFile} 
+            onDownload={(file) => window.open(file.fileUrl, '_blank')} // Simple download handler
+          />
+        </MainContent>
+      </div>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {activeTab === 'files' ? (
-          <div className="flex gap-6">
-            {/* Main Content Area */}
-            <div className="flex-1">
-
-              {/* Top Section - Drop Zone and File Categories */}
-              <div className="flex flex-col lg:flex-row gap-6 mb-8">
-                <FileUploadZone
-                  onFileUpload={handleFileUpload}
-                  isUploading={isUploading}
-                  uploadProgress={uploadProgress}
-                  isDarkMode={isDarkMode}
-                  currentFolderId={currentFolderId}
-                />
-                <FileCategoryTabs
-                  activeFileView={activeFileView}
-                  setActiveFileView={setActiveFileView}
-                  files={files}
-                  isDarkMode={isDarkMode}
-                />
-              </div>
-
-              {/* File Management Controls */}
-              <FileManagementControls
-                activeFileView={activeFileView}
-                files={files}
-                searchQuery={searchQuery}
-                setSearchQuery={setSearchQuery}
-                viewMode={viewMode}
-                setViewMode={setViewMode}
-                isDarkMode={isDarkMode}
-                onEmptyTrash={emptyTrash}
-              />
-
-              {/* Files Display */}
-              <FileDisplay
-                files={filteredFiles as Required<File>[]}
-                viewMode={viewMode}
-                activeFileView={activeFileView}
-                isDarkMode={isDarkMode}
-                searchQuery={searchQuery}
-                onToggleStar={toggleStar}
-                onMoveToTrash={moveToTrash}
-                onRestoreFile={restoreFile}
-                onDeletePermanently={deleteFilePermanently}
-                onFolderOpen={handleFolderOpen}
-                onMoveFile={moveFile}
-                onRefresh={() => refreshFiles(currentFolderId)}
-              />
-            </div>
-
-            {/* Folder Operations Panel */}
-            <FolderOperationsPanel
-              onFolderCreated={handleFolderCreated}
-            />
-          </div>
-        ) : (
-          <UserProfile files={files} isDarkMode={isDarkMode} />
-        )}
-      </main>
+      {/* ===== UPLOAD MODAL (Portal) ===== */}
+      <UploadModal
+          isOpen={isUploadModalOpen}
+          onClose={() => setIsUploadModalOpen(false)}
+          onFileUpload={handleModalFileUpload}
+          isUploading={isUploading}
+          uploadProgress={uploadProgress}
+          currentFolderId={currentFolderId}
+      />
     </div>
   );
 };

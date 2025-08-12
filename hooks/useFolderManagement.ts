@@ -1,6 +1,5 @@
 import { useState, useCallback } from 'react';
 import { useNotification } from '@/contexts/NotificationContext';
-import { File } from '@/lib/db/schema';
 
 interface FolderState {
   currentFolderId: string | null;
@@ -85,14 +84,14 @@ export function useFolderManagement() {
   };
 
   // Create folder
-  const createFolder = useCallback(async (name: string, parentId?: string) => {
+  const createFolder = useCallback(async (name: string, parentId: string | null) => {
     try {
       const response = await fetch('/api/folders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           name, 
-          parentId: parentId || folderState.currentFolderId 
+          parentId: parentId 
         })
       });
 
@@ -112,30 +111,6 @@ export function useFolderManagement() {
     }
   }, [folderState.currentFolderId, showNotification]);
 
-  // Rename folder
-  const renameFolder = useCallback(async (folderId: string, newName: string) => {
-    try {
-      const response = await fetch(`/api/folders/${folderId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newName })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to rename folder');
-      }
-
-      showNotification('success', `Folder renamed to "${newName}"`);
-      return data.folder;
-
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to rename folder';
-      showNotification('error', message);
-      throw error;
-    }
-  }, [showNotification]);
 
   // Delete folder
   const deleteFolder = useCallback(async (folderId: string) => {
@@ -204,7 +179,6 @@ export function useFolderManagement() {
     navigateToFolder,
     navigateToBreadcrumb,
     createFolder,
-    renameFolder,
     deleteFolder,
     moveFile,
   };

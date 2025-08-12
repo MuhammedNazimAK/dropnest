@@ -1,57 +1,45 @@
-import { pgTable, text, uuid, boolean, integer, timestamp } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm'
-
+import { pgTable, text, uuid, boolean, bigint, timestamp, index } from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
+import { sql } from "drizzle-orm/sql"
 
 export const files = pgTable("files", {
-
   id: uuid("id").defaultRandom().primaryKey(),
 
-  // basic file/folder information
   name: text("name").notNull(),
   path: text("path").notNull(),
-  size: integer("size").notNull(),
-  type: text("type").notNull(), // "Folder"
+  size: bigint("size", { mode:"number" }).notNull(), // bigint for large files
+  type: text("type").notNull(),
 
-  // storage information
-  fileUrl: text("file_url").notNull(),
+  fileUrl: text("file_url").notNull(), // nullable for folders
   thumbnailUrl: text("thumbnail_url"),
 
-  //Essential for delete from imagekit
   fileIdInImageKit: text("file_id_imagekit"),
 
-  // Ownership
   userId: text("user_id").notNull(),
-  parentId: uuid("parent_id"), // Parent folder id (null for root items)
+  parentId: uuid("parent_id"),
 
-  // file/folder flags
   isFolder: boolean("is_folder").default(false).notNull(),
   isStarred: boolean("is_starred").default(false).notNull(),
   isTrash: boolean("is_trash").default(false).notNull(),
 
-  // Timestamp
   createdAt: timestamp("created_at").defaultNow().notNull(),
-
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+},(table) => ({
+  userParentIdx: index("files_user_parent_idx").on(table.userId, table.parentId, table.createdAt),
+  
+  userTrashIdx: index("files_user_trash_idx")
+    .on(table.userId)
+    .where(sql`is_trash = true`),
+}));
 
-})
 
-
-export const filesRelation = relations(files, ({one, many}) => ({
-
+export const filesRelation = relations(files, ({ one, many }) => ({
   parent: one(files, {
     fields: [files.parentId],
-    references: [files.id]
+    references: [files.id],
   }),
+  children: many(files),
+}));
 
-  // Relationship to child file/folder
-  children: many(files)
-  
-}))
-
-
-// Type defination
 export type File = typeof files.$inferSelect;
 export type NewFile = typeof files.$inferInsert;
-
-
-

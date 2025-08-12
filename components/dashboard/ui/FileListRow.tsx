@@ -1,0 +1,130 @@
+'use client';
+
+import React from 'react';
+import type { File as FileType } from '@/lib/db/schema';
+import { Folder, FileText, Star, MoreVertical, Trash2, Download, PenSquare, RefreshCw } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { format } from 'date-fns';
+
+
+// Assume DropdownMenu is available
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+interface FileListRowProps {
+  file: Required<FileType>;
+  activeFilter: 'all' | 'starred' | 'trash';
+  onDoubleClick: () => void;
+  onToggleStar: (fileId: string, isStarred: boolean) => void;
+  onMoveToTrash: (fileId: string) => void;
+  onRename: (FileId: string, newName: string) => void;
+  onDownload: (fileId: FileType) => void;
+  onRestoreFile: (fileId: string) => void;
+  onDeletePermanently: (fileId: string) => void;
+}
+
+export const FileListRow: React.FC<FileListRowProps> = ({ file, onDoubleClick, activeFilter, onToggleStar, onMoveToTrash, onRename, onDownload, onRestoreFile, onDeletePermanently }) => {
+    const isFolder = file.isFolder;
+
+    const formatFileSize = (bytes: number) => {
+        if (isFolder || bytes === 0) return '—';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
+    };
+
+    // Simple signature that onSelect can use.
+    const handleRename = () => {
+        // 1. Prompt the user for the new name
+        const newName = prompt("Enter new name:", file.name);
+
+        // 2. Validate the input and call the prop function if valid
+        if (newName && newName.trim() !== "" && newName !== file.name) {
+        onRename(file.id, newName.trim());
+        }
+    };
+
+    return (
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3 }}
+            onDoubleClick={onDoubleClick}
+            className="group grid grid-cols-12 gap-4 items-center w-full px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/80 transition-colors duration-150 cursor-pointer"
+        >
+            {/* Name & Icon */}
+            <div className="col-span-6 flex items-center space-x-4">
+                {isFolder ? <Folder className="w-5 h-5 text-blue-500 flex-shrink-0" /> : <FileText className="w-5 h-5 text-gray-500 flex-shrink-0" />}
+                <span className="font-medium text-sm text-gray-800 dark:text-gray-200 truncate" title={file.name}>
+                    {file.name}
+                </span>
+                {file.isStarred && <Star className="h-4 w-4 text-yellow-400 flex-shrink-0" />}
+            </div>
+
+            {/* Size */}
+            <div className="col-span-2 text-sm text-gray-600 dark:text-gray-400">
+                {formatFileSize(file.size)}
+            </div>
+
+            {/* Last Modified */}
+            <div className="col-span-3 text-sm text-gray-600 dark:text-gray-400">
+                {format(new Date(file.updatedAt), 'MMM d, yyyy')}
+            </div>
+
+            {/* Actions */}
+            <div className="col-span-1 flex justify-end">
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <button className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <MoreVertical className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                        </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                        {/* Show these actions for normal and starred views */}
+                        {activeFilter !== 'trash' ? (
+                            <>
+                                {!file.isFolder && (
+                                    <DropdownMenuItem onSelect={() => onDownload(file)}>
+                                        <Download className="mr-2 h-4 w-4" />
+                                        <span>Download</span>
+                                    </DropdownMenuItem>
+                                )}
+                                <DropdownMenuItem onSelect={() => onToggleStar(file.id, file.isStarred)}>
+                                    <Star className={`mr-2 h-4 w-4 ${file.isStarred ? 'text-yellow-400 fill-yellow-400' : ''}`} />
+                                    <span>{file.isStarred ? 'Unstar' : 'Star'}</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => onRename(file.id, file.name)}>
+                                    <PenSquare className="mr-2 h-4 w-4" />
+                                    <span>Rename</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onSelect={() => onMoveToTrash(file.id)} className="text-red-500 focus:bg-red-500 focus:text-white">
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    <span>Move to Trash</span>
+                                </DropdownMenuItem>
+                            </>
+                        ) : (
+                            /* Show these actions only for the trash view */
+                            <>
+                                <DropdownMenuItem onSelect={() => onRestoreFile(file.id)}>
+                                    <RefreshCw className="mr-2 h-4 w-4" />
+                                    <span>Restore</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => onDeletePermanently(file.id)} className="text-red-500 focus:bg-red-500 focus:text-white">
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    <span>Delete Permanently</span>
+                                </DropdownMenuItem>
+                            </>
+                        )}
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </div>
+        </motion.div>
+    );
+};

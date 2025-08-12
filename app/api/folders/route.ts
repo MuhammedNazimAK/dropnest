@@ -10,6 +10,7 @@ import { v4 as uuidv4 } from "uuid";
 export async function POST(request: NextRequest) {
   try {
     const { userId } = await auth();
+    let parentFolder = null;
     
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -23,7 +24,7 @@ export async function POST(request: NextRequest) {
 
     // Validate parent folder exists if parentId provided
     if (parentId) {
-      const parentFolder = await db.query.files.findFirst({
+      parentFolder = await db.query.files.findFirst({
         where: and(
           eq(files.id, parentId),
           eq(files.userId, userId),
@@ -56,13 +57,8 @@ export async function POST(request: NextRequest) {
 
     // Build folder path
     let folderPath = name;
-    if (parentId) {
-      const parentFolder = await db.query.files.findFirst({
-        where: eq(files.id, parentId)
-      });
-      if (parentFolder) {
-        folderPath = `${parentFolder.path}/${name}`;
-      }
+    if (parentId && parentFolder) {
+      folderPath = `${parentFolder.path}/${name}`;
     }
 
     // Create folder

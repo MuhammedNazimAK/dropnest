@@ -22,8 +22,11 @@ export async function POST(request: NextRequest) {
     // Parse form data
     const formData = await request.formData();
     const uploadFiles = formData.getAll("files") as File[]; // Multiple files
-    const parentId = formData.get("parentId") as string || null;
 
+    const parentIdValue = formData.get("parentId") as string;
+    const parentId = (parentIdValue && parentIdValue !== 'null') ? parentIdValue : null;
+
+    
     if (!uploadFiles || uploadFiles.length === 0) {
       return NextResponse.json({ error: "No files provided" }, { status: 400 });
     }
@@ -76,24 +79,31 @@ export async function POST(request: NextRequest) {
         const fileBuffer = Buffer.from(buffer);
 
         const folderPath = parentId ? `/dropnest/${userId}/folder/${parentId}` : `/dropnest/${userId}`;
-        const originalName = file.name;
-        const fileExtension = originalName.split(".").pop() || "";
-        const uniqueFileName = `${uuidv4()}.${fileExtension}`;
+
+        console.log(`Uploading '${file.name}' to ImageKit folder: ${folderPath}`);
 
         // Upload to ImageKit
         const uploadResponse = await imageKit.upload({
           file: fileBuffer,
-          fileName: uniqueFileName,
+          fileName: file.name,
           folder: folderPath,
-          useUniqueFileName: false
+          useUniqueFileName: true
         });
+
+        console.log("ImageKit Upload Response:", JSON.stringify(uploadResponse, null, 2));
+
+        if (!uploadResponse || !uploadResponse.fileId) {
+            console.error("!!! FAILED to get fileId from ImageKit response for file:", file.name);
+            // Skip this file if the response is invalid
+            continue; 
+        }
 
         // Save to database
         const fileData = {
-          name: originalName,
+          name: uploadResponse.name,
           path: uploadResponse.filePath,
-          size: file.size,
-          type: file.type,
+          size: uploadResponse.size,
+          type: uploadResponse.fileType,
           fileUrl: uploadResponse.url,
           thumbnailUrl: uploadResponse.thumbnailUrl || null,
           fileIdInImageKit: uploadResponse.fileId,
@@ -104,8 +114,12 @@ export async function POST(request: NextRequest) {
           isTrash: false,
         };
 
+        console.log("Preparing to insert into DB:", JSON.stringify(fileData, null, 2));
+
         const [newFile] = await db.insert(files).values(fileData).returning();
         uploadedFiles.push(newFile);
+
+        console.log(`Successfully inserted DB record for fileId: ${newFile.id}`);
 
       } catch (error) {
         console.error(`Error uploading ${file.name}:`, error);

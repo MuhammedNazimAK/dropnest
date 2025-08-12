@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/lib/db';
 import { files } from '@/lib/db/schema';
-import { eq, and, isNull } from 'drizzle-orm';
+import { eq, and, isNull, desc } from 'drizzle-orm';
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,11 +13,9 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const parentId = searchParams.get('parentId');
-    const starred = searchParams.get('starred');
-    const trash = searchParams.get('trash');
-    const active = searchParams.get('active');
     const folderId = searchParams.get('folderId'); // For getting folder info
+
+    const active = searchParams.get('active');
 
     // If requesting specific folder info
     if (folderId && folderId !== 'root') {
@@ -36,32 +34,39 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ folder });
     }
 
+    const parentId = searchParams.get('parentId');
+    const starred = searchParams.get('starred') === 'true';
+    const trash = searchParams.get('trash') === 'true';
+
     // Build query conditions
     let conditions = [eq(files.userId, userId)];
 
-    // Parent folder condition
-    if (parentId === 'root' || parentId === null) {
-      conditions.push(isNull(files.parentId));
-    } else if (parentId) {
-      conditions.push(eq(files.parentId, parentId));
-    }
-
-    // Filter conditions
-    if (starred === 'true') {
-      conditions.push(eq(files.isStarred, true));
-      conditions.push(eq(files.isTrash, false)); // Starred items shouldn't include trash
-    } else if (trash === 'true') {
+      if (trash) {
       conditions.push(eq(files.isTrash, true));
-    } else if (active === 'true') {
+    } else {
+      // For any view that is NOT trash, only want non-trashed items.
       conditions.push(eq(files.isTrash, false));
+
+      if (starred) {
+        // If it's the starred view, get all starred items.
+        conditions.push(eq(files.isStarred, true));
+      } else {
+        // Otherwise, it's a normal folder view. Filter by parentId.
+        if (parentId && parentId !== 'root') {
+          conditions.push(eq(files.parentId, parentId));
+        } else {
+          // Default to the root folder if no parentId is provided.
+          conditions.push(isNull(files.parentId));
+        }
+      }
     }
 
     // Fetch files
     const fileList = await db.query.files.findMany({
       where: and(...conditions),
-      orderBy: (files, { desc, asc }) => [
-        asc(files.isFolder), // Folders first
-        desc(files.updatedAt) // Then by most recent
+       orderBy: [
+        desc(files.isFolder), // Show folders first
+        desc(files.updatedAt)
       ]
     });
 
@@ -71,10 +76,4 @@ export async function GET(request: NextRequest) {
     console.error('Error fetching files:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-}
-
-// Keep existing POST method for file uploads unchanged
-export async function POST(request: NextRequest) {
-  // Your existing file upload logic here
-  // This should remain the same as your current implementation
 }

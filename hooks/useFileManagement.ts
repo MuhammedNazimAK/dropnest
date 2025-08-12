@@ -33,7 +33,7 @@ export const useFileManagement = (initialFiles: NewFile[], userId: string) => {
 
   const { showNotification } = useNotification();
 
-  const handleFileUpload = async (uploadFiles: FileList) => {
+  const handleFileUpload = async (uploadFiles: FileList, currentFolderId: string | null) => {
     setState(prev => ({ ...prev, isUploading: true, uploadProgress: 0 }));
 
     try {
@@ -43,6 +43,10 @@ export const useFileManagement = (initialFiles: NewFile[], userId: string) => {
       });
       formData.append('userId', userId);
 
+      if (currentFolderId) {
+        formData.append('parentId', currentFolderId);
+      } 
+      
       const response = await fetch('/api/files/upload', {
         method: 'POST',
         body: formData,
@@ -238,9 +242,6 @@ export const useFileManagement = (initialFiles: NewFile[], userId: string) => {
 
     // Optimistic update - remove file immediately
     const previousFiles = [...files];
-    setFiles(prevFiles => prevFiles.filter(file => file.id !== fileId));
-
-    console.log("file id for delete", fileId)
 
     try {
       const response = await fetch(`/api/files/${fileId}/delete`, {
@@ -250,32 +251,41 @@ export const useFileManagement = (initialFiles: NewFile[], userId: string) => {
 
       const data = await response.json();
 
-      console.log("deleted data", data)
-
       if (!response.ok) {
         throw new Error(data.message || 'Failed to delete file permanently');
       }
 
-      showNotification('success', 'File deleted permanently');
+      if (data.deletedIds && data.deletedIds.length > 0) {
 
-      // File is already removed from optimistic update, no need to update again
+        setFiles(prevFiles => prevFiles.filter(file => !data.deletedIds.includes(file.id)));
+      } else {
+
+        // Fallback for single file deletion if API doesn't return array
+        setFiles(prevFiles => prevFiles.filter(file => file.id !== fileId));
+      }
+
+      showNotification('success', 'Item(s) deleted permanently');
 
     } catch (error) {
-      // Revert optimistic update
+
+      // Revert optimistic update on failure
       setFiles(previousFiles);
       console.error('Failed to delete file permanently:', error);
       showNotification('error', error instanceof Error ? error.message : 'Failed to delete file');
 
     } finally {
+      
       setState(prev => ({ ...prev, isOperating: false }));
-    }
+    } 
   };
 
 
-  const refreshFiles = useCallback(async (folderId?: string | null) => {
+  const refreshFiles = useCallback(async (currentFolderId?: string | null) => {
     try {
 
-      const response = await fetch(`/api/files?folderId=${folderId || ''}`);
+      const parentIdQuery = currentFolderId || 'root';
+
+      const response = await fetch(`/api/files?parentId=${parentIdQuery}&active=true`);
       if (response.ok) {
         const data = await response.json();
         setFiles(data.files || []);
@@ -286,6 +296,63 @@ export const useFileManagement = (initialFiles: NewFile[], userId: string) => {
       showNotification('error', 'Failed to refresh files');
     }
   }, [showNotification]);
+
+
+  const renameItem = async (fileId: string, newName: string) => {
+
+    const fileToRename = files.find(f => f.id === fileId);
+    if (!fileToRename) {
+      showNotification('error', 'File not found');
+      return;
+    }
+
+    let finalName = newName.trim();
+
+    if (!fileToRename.isFolder && fileToRename.name.includes('.')) {
+      const originalExtension = fileToRename.name.split('.').pop();
+
+      // If the user's new name already has an extension, remove it first
+      if (finalName.includes('.')) {
+        finalName = finalName.substring(0, finalName.lastIndexOf('.'));
+      }
+
+      finalName = `${finalName}.${originalExtension}`;
+    }
+
+    // Prevent renaming to an empty string
+    if (!finalName) {
+      showNotification('error', 'Name cannot be empty');
+      return;
+    }
+
+    setState(prev => ({ ...prev, isOperating: true }));
+
+    const previousFiles = [...files];
+    setFiles(prev => prev.map(f => (f.id === fileId ? { ...f, name: finalName }
+    :f)));
+
+    try {
+      
+      const response = await fetch(`/api/files/${fileId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: finalName })
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Failed to rename');
+
+      setFiles(prev => prev.map(f => (f.id === fileId ? data.file : f)));
+      showNotification('success', 'Item renamed successfully');
+
+    } catch (error) {
+      setFiles(previousFiles);
+      showNotification('error', error instanceof Error ? error.message : 'Rename failed');
+
+    } finally {
+      setState(prev => ({ ...prev, isOperating: true }));
+    }
+  };
 
   
 
@@ -298,6 +365,7 @@ export const useFileManagement = (initialFiles: NewFile[], userId: string) => {
     restoreFile,
     emptyTrash,
     deleteFilePermanently,
-    refreshFiles
+    refreshFiles,
+    renameItem
   };
 };
