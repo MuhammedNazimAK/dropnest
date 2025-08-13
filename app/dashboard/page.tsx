@@ -8,8 +8,6 @@ import { auth } from '@clerk/nextjs/server';
 export default async function DashboardPage() {
   const { userId } = await auth();
   
-  console.log("came to dashboard page.tsx")
-
   if (!userId) {
     redirect('/sign-in');
   }

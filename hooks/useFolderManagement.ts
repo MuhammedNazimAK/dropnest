@@ -139,10 +139,20 @@ export function useFolderManagement() {
   const moveFile = useCallback(async (fileId: string, targetFolderId: string | null) => {
     try {
       const response = await fetch(`/api/files/${fileId}/move`, {
-        method: 'PUT',
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ targetFolderId })
       });
+
+      const contentType = response.headers.get("content-type");
+      if (!response.ok) {
+        // Try to parse error json, but fallback if it's not there
+        let errorData = { error: `Failed to move file with status: ${response.status}` };
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+            errorData = await response.json();
+        }
+        throw new Error(errorData.error);
+      }
 
       const data = await response.json();
 

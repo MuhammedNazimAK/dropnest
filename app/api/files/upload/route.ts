@@ -76,21 +76,16 @@ export async function POST(request: NextRequest) {
         }
 
         const buffer = await file.arrayBuffer();
-        const fileBuffer = Buffer.from(buffer);
 
         const folderPath = parentId ? `/dropnest/${userId}/folder/${parentId}` : `/dropnest/${userId}`;
 
-        console.log(`Uploading '${file.name}' to ImageKit folder: ${folderPath}`);
-
         // Upload to ImageKit
         const uploadResponse = await imageKit.upload({
-          file: fileBuffer,
+          file: Buffer.from(buffer),
           fileName: file.name,
           folder: folderPath,
           useUniqueFileName: true
         });
-
-        console.log("ImageKit Upload Response:", JSON.stringify(uploadResponse, null, 2));
 
         if (!uploadResponse || !uploadResponse.fileId) {
             console.error("!!! FAILED to get fileId from ImageKit response for file:", file.name);
@@ -114,12 +109,11 @@ export async function POST(request: NextRequest) {
           isTrash: false,
         };
 
-        console.log("Preparing to insert into DB:", JSON.stringify(fileData, null, 2));
+        const [newlyCreatedFile] = await db.insert(files).values(fileData).returning();
 
-        const [newFile] = await db.insert(files).values(fileData).returning();
-        uploadedFiles.push(newFile);
-
-        console.log(`Successfully inserted DB record for fileId: ${newFile.id}`);
+        if (newlyCreatedFile) {
+            uploadedFiles.push(newlyCreatedFile);
+        }
 
       } catch (error) {
         console.error(`Error uploading ${file.name}:`, error);

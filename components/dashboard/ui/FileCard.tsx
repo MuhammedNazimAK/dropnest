@@ -2,8 +2,10 @@
 
 import React from 'react';
 import type { File as FileType } from '@/lib/db/schema';
-import { Folder, FileText, Star, MoreVertical, Trash2, Download, PenSquare, RefreshCw } from 'lucide-react';
+import { Folder, FileText, Star, MoreVertical, Trash2, Download, PenSquare, RefreshCw, Move } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useDraggable, useDroppable } from '@dnd-kit/core';
+import { clsx } from 'clsx';
 
 // DropdownMenu components would be from a UI library like Shadcn/UI
 import {
@@ -20,6 +22,7 @@ interface FileCardProps {
   /**
    * A callback function for when the card is double-clicked (used for opening folders).
    */
+  onMove: (file: Required<FileType>) => void;
   onDoubleClick: () => void;
   onToggleStar: (fileId: string, isStarred: boolean) => void;
   onMoveToTrash: (fileId: string) => void;
@@ -27,16 +30,45 @@ interface FileCardProps {
   onDownload: (file: FileType) => void;
   onRestoreFile: (fileId: string) => void;
   onDeletePermanently: (fileId: string) => void;
+
 }
 
-export const FileCard: React.FC<FileCardProps> = ({ file, onDoubleClick, activeFilter, onDownload, onToggleStar, onRename, onMoveToTrash, onRestoreFile, onDeletePermanently }) => {
+export const FileCard: React.FC<FileCardProps> = ({ file, onMove, onDoubleClick, activeFilter, onDownload, onToggleStar, onRename, onMoveToTrash, onRestoreFile, onDeletePermanently }) => {
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef: draggableRef,
+    isDragging,
+  } = useDraggable({
+    id: file.id,
+    data: { file },
+  });
+
+
+  const {
+    setNodeRef: droppableRef, // A separate ref for the droppable target
+    isOver,
+  } = useDroppable({
+    id: file.id, // The folder's ID is also its droppable ID
+    disabled: !file.isFolder, // Disable dropping on anything that isn't a folder
+  });
+
+  // Combine refs since one element can't have two `ref` props
+  const setRefs = (node: HTMLElement | null) => {
+    draggableRef(node);
+    if (file.isFolder) {
+      droppableRef(node);
+    }
+  };
+
   const isFolder = file.isFolder;
 
   const cardVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0 },
+    hidden: { opacity: 0 },
+    visible: { opacity: 1 },
   };
-  
+
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -57,13 +89,25 @@ export const FileCard: React.FC<FileCardProps> = ({ file, onDoubleClick, activeF
   };
 
   return (
+
     <motion.div
+      ref={setRefs}
+      {...listeners}
+      {...attributes}
+      onDoubleClick={onDoubleClick}
       variants={cardVariants}
       initial="hidden"
       animate="visible"
-      transition={{ duration: 0.3 }}
-      onDoubleClick={onDoubleClick}
-      className="group relative rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/50 hover:shadow-lg hover:border-blue-500/50 dark:hover:border-blue-500/50 transition-all duration-200 cursor-pointer"
+      transition={{ duration: 0.2 }}
+      className={clsx(
+        "group relative rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/50",
+        "transition-all duration-200 cursor-pointer",
+        "h-60 w-full",
+        { "cursor-grab": !isDragging },
+        { "opacity-30": isDragging },
+        // The ring effect is a great indicator, let's keep it.
+        { "ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-gray-900": isOver && file.isFolder },
+      )}
     >
       <div className="p-4 flex flex-col h-full">
         {/* Icon and Actions */}
@@ -76,67 +120,71 @@ export const FileCard: React.FC<FileCardProps> = ({ file, onDoubleClick, activeF
             )}
           </div>
           <div className="absolute top-2 right-2">
-              <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                      <button className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <MoreVertical className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                      </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                      {/* Show these actions for normal and starred views */}
-                      {activeFilter !== 'trash' ? (
-                          <>
-                              {!file.isFolder && (
-                                  <DropdownMenuItem onSelect={() => onDownload(file)}>
-                                      <Download className="mr-2 h-4 w-4" />
-                                      <span>Download</span>
-                                  </DropdownMenuItem>
-                              )}
-                              <DropdownMenuItem onSelect={() => onToggleStar(file.id, file.isStarred)}>
-                                  <Star className={`mr-2 h-4 w-4 ${file.isStarred ? 'text-yellow-400 fill-yellow-400' : ''}`} />
-                                  <span>{file.isStarred ? 'Unstar' : 'Star'}</span>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onSelect={handleRename}>
-                                  <PenSquare className="mr-2 h-4 w-4" />
-                                  <span>Rename</span>
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem onSelect={() => onMoveToTrash(file.id)} className="text-red-500 focus:bg-red-500 focus:text-white">
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  <span>Move to Trash</span>
-                              </DropdownMenuItem>
-                          </>
-                      ) : (
-                          /* Show these actions only for the trash view */
-                          <>
-                              <DropdownMenuItem onSelect={() => onRestoreFile(file.id)}>
-                                  <RefreshCw className="mr-2 h-4 w-4" />
-                                  <span>Restore</span>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onSelect={() => onDeletePermanently(file.id)} className="text-red-500 focus:bg-red-500 focus:text-white">
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  <span>Delete Permanently</span>
-                              </DropdownMenuItem>
-                          </>
-                      )}
-                  </DropdownMenuContent>
-              </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <MoreVertical className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                {/* Show these actions for normal and starred views */}
+                {activeFilter !== 'trash' ? (
+                  <>
+                    {!file.isFolder && (
+                      <DropdownMenuItem onSelect={() => onDownload(file)}>
+                        <Download className="mr-2 h-4 w-4" />
+                        <span>Download</span>
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem onSelect={() => onToggleStar(file.id, file.isStarred)}>
+                      <Star className={`mr-2 h-4 w-4 ${file.isStarred ? 'text-yellow-400 fill-yellow-400' : ''}`} />
+                      <span>{file.isStarred ? 'Unstar' : 'Star'}</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onMove(file)}>
+                      <Move className="w-4 h-4 mr-2" />
+                      <span>Move</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={handleRename}>
+                      <PenSquare className="mr-2 h-4 w-4" />
+                      <span>Rename</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onSelect={() => onMoveToTrash(file.id)} className="text-red-500 focus:bg-red-500 focus:text-white">
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      <span>Move to Trash</span>
+                    </DropdownMenuItem>
+                  </>
+                ) : (
+                  /* Show these actions only for the trash view */
+                  <>
+                    <DropdownMenuItem onSelect={() => onRestoreFile(file.id)}>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      <span>Restore</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => onDeletePermanently(file.id)} className="text-red-500 focus:bg-red-500 focus:text-white">
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      <span>Delete Permanently</span>
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
         {/* Thumbnail for image files */}
         {!isFolder && file.thumbnailUrl && (
           <div className="flex-grow mb-4 flex items-center justify-center">
-            <img 
-              src={file.thumbnailUrl} 
-              alt={file.name} 
+            <img
+              src={file.thumbnailUrl}
+              alt={file.name}
               className="max-h-24 object-contain rounded-md"
             />
           </div>
         )}
-        
+
         {/* Spacer for non-image files to maintain height */}
-         {!isFolder && !file.thumbnailUrl && <div className="flex-grow"></div>}
+        {(!isFolder || (!isFolder && !file.thumbnailUrl)) && <div className="flex-grow"></div>}
 
 
         {/* File Name and Size */}

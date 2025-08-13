@@ -12,17 +12,18 @@ interface FileViewProps {
   activeFilter: 'all' | 'starred' | 'trash';
   onFolderOpen: (folder: FileType) => void;
   onToggleStar: (fileId: string, isStarred: boolean) => void;
-  onMoveToTrash: (fileId: string) => void;
+  onMoveToTrash: (fileId: string) => void;  
   onRestoreFile: (fileId: string) => void;
   onDeletePermanently: (fileId: string) => void;
   onRename: (fileId: string, newName: string) => void;
-  onMove: (fileId: string, targetFolderId: string | null) => void;
+  onMove: (file: Required<FileType>) => void;
   onDownload: (file: FileType) => void;
+  onUploadClick: () => void;
 }
 
 
 export const FileView: React.FC<FileViewProps> = (props) => {
-  const { files, viewMode, activeFilter, onFolderOpen } = props;
+  const { files, viewMode, activeFilter, onFolderOpen, onUploadClick } = props;
 
   if (files.length === 0) {
     const messages = {
@@ -30,7 +31,14 @@ export const FileView: React.FC<FileViewProps> = (props) => {
       starred: { message: "No starred files", details: "Star a file to see it appear here." },
       trash: { message: "Trash is empty", details: "Items moved to the trash will appear here." },
     };
-    return <EmptyState {...messages[activeFilter]} />;
+
+    // If the trash is empty, show the specific trash message but without an upload button.
+    if (activeFilter === 'trash') {
+      return <EmptyState {...messages.trash} />;
+    }
+
+    // For all other empty views, show the message WITH the upload button.
+    return <EmptyState {...messages[activeFilter]} onUploadClick={onUploadClick} />;
   }
 
   // Pass all props down to the children
@@ -67,9 +75,10 @@ export const FileView: React.FC<FileViewProps> = (props) => {
             file={file} 
             {...childProps}
             onDoubleClick={() => file.isFolder && onFolderOpen(file)}
+            
           />
         ))}
-      </div>
+      </div>  
     );
   }
 

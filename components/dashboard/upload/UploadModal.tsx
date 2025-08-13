@@ -1,6 +1,6 @@
     'use client';
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Upload, File, X, CheckCircle } from 'lucide-react';
 
 interface UploadModalProps {
@@ -42,17 +42,27 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onFil
     }
   };
 
+  useEffect(() => {
+    if (!isOpen) {
+      // Small delay to prevent a visual flash while the modal closes
+      const timer = setTimeout(() => {
+        setSelectedFiles([]);
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
   const handleUploadClick = () => {
     if (selectedFiles.length > 0) {
       const dataTransfer = new DataTransfer();
       selectedFiles.forEach(file => dataTransfer.items.add(file));
       onFileUpload(dataTransfer.files);
-      // Optionally clear files after initiating upload
-      // setSelectedFiles([]);
+      setSelectedFiles([]);
     }
   };
 
   if (!isOpen) return null;
+
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center" onClick={onClose}>

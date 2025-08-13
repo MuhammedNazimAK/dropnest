@@ -81,8 +81,6 @@ export const useFileManagement = (initialFiles: NewFile[], userId: string) => {
   const toggleStar = async (fileId: string) => {
     setState(prev => ({ ...prev, isOperating: true }));
 
-    console.log("came to toggle")
-
     // Optimistic update
     const previousFiles = [...files];
     const targetFile = files.find(file => file.id === fileId);
@@ -274,7 +272,7 @@ export const useFileManagement = (initialFiles: NewFile[], userId: string) => {
       showNotification('error', error instanceof Error ? error.message : 'Failed to delete file');
 
     } finally {
-      
+
       setState(prev => ({ ...prev, isOperating: false }));
     } 
   };
@@ -354,7 +352,40 @@ export const useFileManagement = (initialFiles: NewFile[], userId: string) => {
     }
   };
 
-  
+
+  const moveItem = async (fileId: string, targetFolderId: string | null) => {
+    setState(prev => ({ ...prev, isOperating: true }));
+
+    // Optimistic Update: Immediately remove the file from the UI.
+    const previousFiles = [...files];
+    setFiles(prev => prev.filter(f => f.id !== fileId));
+
+    try {
+      const response = await fetch(`/api/files/${fileId}/move`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetFolderId }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to move item');
+      }
+      
+      showNotification('success', data.message);
+      
+      // No need to add the file back manually. The parent component will
+      // trigger a refresh of the folder contents.
+
+    } catch (error) {
+      // Revert on failure
+      setFiles(previousFiles);
+      showNotification('error', error instanceof Error ? error.message : 'Failed to move item');
+    } finally {
+      setState(prev => ({ ...prev, isOperating: false }));
+    }
+  };
+
 
   return {
     files,
@@ -366,6 +397,7 @@ export const useFileManagement = (initialFiles: NewFile[], userId: string) => {
     emptyTrash,
     deleteFilePermanently,
     refreshFiles,
-    renameItem
+    renameItem,
+    moveItem
   };
 };

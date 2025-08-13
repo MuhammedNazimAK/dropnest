@@ -28,8 +28,6 @@ export async function PATCH(request: NextRequest) {
                 )
             );
 
-            console.log('file found', file)
-
         if (!file) {
             return NextResponse.json({ error: "File not found in trash" }, { status: 404 });
         }

@@ -37,8 +37,9 @@ async function getCascadingDeleteIds(folderId: string, userId: string): Promise<
 
     if (child.isFolder) {
       // If the child is a folder, recurse into it
-      const nestedId = await getCascadingDeleteIds(child.id, userId);
-      allDbIdsToDelete.push(...nestedId.dbIds);
+      const nestedResult = await getCascadingDeleteIds(child.id, userId);
+      allDbIdsToDelete.push(...nestedResult.dbIds);
+      allImageKitIdsToDelete.push(...nestedResult.imageKitIds);
    
     } else if (child.fileIdInImageKit) {
 
@@ -62,7 +63,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { fileI
       )
     }
 
-    const fileIdToDelete = params.fileId;
+    const { fileId: fileIdToDelete } = params;
 
     // Find the initial item (files or folder)
     const initialItem  = await db.query.files.findFirst({
@@ -88,12 +89,8 @@ export async function DELETE(request: NextRequest, { params }: { params: { fileI
       imageKitFileIdsToDelete.push(initialItem.fileIdInImageKit);
     }
 
-    console.log(`Found ${imageKitFileIdsToDelete.length} files to delete from ImageKit.`);
-
     // 3. Bulk delete from ImageKit
     if (imageKitFileIdsToDelete.length > 0) {
-      console.log("Attempting to bulk delete the following ImageKit IDs:", imageKitFileIdsToDelete);
-
       try {
 
         const deleteResult = await imageKit.bulkDeleteFiles(imageKitFileIdsToDelete);
@@ -115,7 +112,6 @@ export async function DELETE(request: NextRequest, { params }: { params: { fileI
     // 4. Bulk delete from the database
     if (dbRecordIdsToDelete.length > 0) {
         await db.delete(files).where(inArray(files.id, dbRecordIdsToDelete));
-        console.log(`Successfully deleted ${dbRecordIdsToDelete.length} records from the database.`);
     }
 
       return NextResponse.json({
