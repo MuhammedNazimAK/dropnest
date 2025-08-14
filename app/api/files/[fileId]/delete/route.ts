@@ -7,13 +7,13 @@ import { NextResponse, NextRequest } from "next/server";
 
 if (!process.env.IMAGEKIT_PRIVATE_KEY) {
   console.error("CRITICAL: IMAGEKIT_PRIVATE_KEY is not defined!");
-}
+};
 
 const imageKit = new ImageKit({
   publicKey: process.env.IMAGEKIT_PUBLIC_KEY || "",
   privateKey: process.env.IMAGEKIT_PRIVATE_KEY || "",
   urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT || ""
-})
+});
 
 /**
  * A recursive function to gather all nested files and folders for deletion.

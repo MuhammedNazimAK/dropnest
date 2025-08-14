@@ -13,17 +13,18 @@ import { FileView } from '@/components/dashboard/views/FileView';
 import { UploadModal } from '@/components/dashboard/upload/UploadModal';
 import { MoveModal } from '@/components/dashboard/modals/MoveModal';
 import { FileCard } from '@/components/dashboard/ui/FileCard';
+import { FileListRow } from '@/components/dashboard/ui/FileListRow';
 
-import { 
-    DndContext, 
-    DragOverlay, 
-    type DragEndEvent, 
-    type Active,
-    useSensor,
-    useSensors,
-    PointerSensor,
-    KeyboardSensor
-} from '@dnd-kit/core'; 
+import {
+  DndContext,
+  DragOverlay,
+  type DragEndEvent,
+  type Active,
+  useSensor,
+  useSensors,
+  PointerSensor,
+  KeyboardSensor
+} from '@dnd-kit/core';
 
 interface DashboardClientProps {
   initialFiles: File[];
@@ -124,7 +125,7 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
     setIsMoveModalOpen(false);
   };
 
-   const sensors = useSensors(
+  const sensors = useSensors(
     useSensor(PointerSensor, {
       // This is the activation constraint we wanted.
       // Require the mouse to move by 10 pixels before activating a drag.
@@ -190,6 +191,7 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
         setActiveFilter={setActiveFilter}
         onFolderCreated={handleFolderAction}
         onUploadClick={() => setIsUploadModalOpen(true)}
+        allUserFiles={initialFiles}
         createFolder={createFolder}
         currentFolderId={currentFolderId}
         files={files}
@@ -234,19 +236,36 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
           <DragOverlay>
             {activeDragItem ? (
               // When an item is being dragged, render a FileCard here
-              <FileCard
-                file={activeDragItem.data.current?.file}
-                // Pass dummy functions for props that aren't used in the overlay's appearance
-                onMove={() => { }}
-                onDoubleClick={() => { }}
-                activeFilter={'all'}
-                onDownload={() => { }}
-                onToggleStar={() => { }}
-                onRename={() => { }}
-                onMoveToTrash={() => { }}
-                onRestoreFile={() => { }}
-                onDeletePermanently={() => { }}
-              />
+              viewMode === 'grid' ? (
+                <FileCard
+                  file={activeDragItem.data.current?.file}
+                  // dummy functions for props that aren't used in the overlay's appearance
+                  onMove={() => { }}
+                  onDoubleClick={() => { }}
+                  activeFilter={'all'}
+                  onDownload={() => { }}
+                  onToggleStar={() => { }}
+                  onRename={() => { }}
+                  onMoveToTrash={() => { }}
+                  onRestoreFile={() => { }}
+                  onDeletePermanently={() => { }}
+                />
+              ) : (
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg">
+                  <FileListRow
+                    file={activeDragItem.data.current?.file}
+                    onMove={() => { }}
+                    onDoubleClick={() => { }}
+                    activeFilter={'all'}
+                    onDownload={() => { }}
+                    onToggleStar={() => { }}
+                    onRename={() => { }}
+                    onMoveToTrash={() => { }}
+                    onRestoreFile={() => { }}
+                    onDeletePermanently={() => { }}
+                  />
+                </div>
+              )
             ) : null}
           </DragOverlay>
         </DndContext>

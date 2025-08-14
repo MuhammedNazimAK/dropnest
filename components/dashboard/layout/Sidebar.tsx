@@ -1,37 +1,43 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import Logo from '@/components/ui/logo';
 import { File, Star, Trash2, Plus, HardDrive } from 'lucide-react';
 import { UploadButton } from '../upload/UploadButton';
+import { useUserStorage } from '@/hooks/useUserStorage';
 
 
 interface SidebarProps {
   activeFilter: 'all' | 'starred' | 'trash';
   setActiveFilter: (filter: 'all' | 'starred' | 'trash') => void;
-  /**
-   * A callback function to be invoked after a new folder is successfully created.
-   * This is used to trigger a data refresh.
-   */
   onFolderCreated: () => void;
   onUploadClick: () => void;
-  /**
-   * The complete list of all files to be used for calculating storage space.
-   */
   files: Array<{ size: number }>;
   createFolder: (name: string, parentId: string | null) => Promise<any>;
   currentFolderId: string | null;
 }
 
+const formatBytes = (bytes: number, decimals = 2) => {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+};
+
+
 export const Sidebar: React.FC<SidebarProps> = ({ activeFilter, setActiveFilter, onFolderCreated, onUploadClick, files, createFolder, currentFolderId }) => {
   const [isCreating, setIsCreating] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
+
+  const { totalStorage, isLoading } = useUserStorage();
 
   const handleCreateFolder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newFolderName.trim()) return;
     await createFolder(newFolderName.trim(), currentFolderId);
-    
+
     setNewFolderName('');
     setIsCreating(false);
     onFolderCreated?.();
@@ -42,10 +48,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeFilter, setActiveFilter,
     { key: 'starred', label: 'Starred', icon: Star },
     { key: 'trash', label: 'Trash', icon: Trash2 },
   ];
-  
-  const totalStorage = 5 * 1024 * 1024 * 1024; // 5GB in bytes
-  const usedStorage = files.reduce((acc, file) => acc + file.size, 0);
-  const storagePercentage = (usedStorage / totalStorage) * 100;
+
+  const maxStorage = 5 * 1024 * 1024 * 1024; // 5 GB
+
+  const usagePercentage = useMemo(() => {
+    if (maxStorage === 0) return 0;
+    return (totalStorage / maxStorage) * 100;
+  }, [totalStorage, maxStorage]);
+
 
   return (
     <aside className="w-72 flex-shrink-0 bg-gray-100 dark:bg-gray-900/50 p-6 flex flex-col justify-between border-r border-gray-200 dark:border-gray-800">
@@ -53,10 +63,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeFilter, setActiveFilter,
         <div className="mb-10">
           <Logo size="md" />
         </div>
-        
+
         <div className="flex flex-col space-y-4">
-          <UploadButton onUploadClick={onUploadClick}/>
-          
+          <UploadButton onUploadClick={onUploadClick} />
+
           <button
             onClick={() => setIsCreating(true)}
             className="w-full flex items-center space-x-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-800 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors"
@@ -94,11 +104,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeFilter, setActiveFilter,
                     e.preventDefault();
                     setActiveFilter(item.key as 'all' | 'starred' | 'trash');
                   }}
-                  className={`flex items-center space-x-3 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors ${
-                    activeFilter === item.key
-                      ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300'
-                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800'
-                  }`}
+                  className={`flex items-center space-x-3 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors ${activeFilter === item.key
+                    ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800'
+                    }`}
                 >
                   <item.icon className="h-5 w-5" />
                   <span>{item.label}</span>
@@ -108,15 +117,26 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeFilter, setActiveFilter,
           </ul>
         </nav>
       </div>
-      
+
       {/* Storage Meter */}
-      <div className="px-4">
-          <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Storage</h4>
-          <p className="text-xs text-gray-500 mt-1">{(usedStorage / (1024*1024)).toFixed(2)} MB of 5 GB used</p>
-          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mt-2">
-            <div className="bg-blue-600 h-1.5 rounded-full" style={{ width: `${storagePercentage}%` }}></div>
-          </div>
-      </div>
-    </aside>
+      <div className="mt-auto">
+                <div className="px-3 py-4 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                    <h3 className="text-sm font-semibold mb-2">Storage</h3>
+                    {isLoading ? (
+                        <div className="h-2 bg-gray-300 dark:bg-gray-700 rounded-full animate-pulse"></div>
+                    ) : (
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                            <div 
+                                className="bg-blue-600 h-2 rounded-full" 
+                                style={{ width: `${usagePercentage}%` }}
+                            ></div>
+                        </div>
+                    )}
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                        {isLoading ? 'Calculating...' : `${formatBytes(totalStorage)} of 5 GB used`}
+                    </p>
+                </div>
+            </div>
+        </aside>
   );
 };

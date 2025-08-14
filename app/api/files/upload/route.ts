@@ -77,13 +77,13 @@ export async function POST(request: NextRequest) {
 
         const buffer = await file.arrayBuffer();
 
-        const folderPath = parentId ? `/dropnest/${userId}/folder/${parentId}` : `/dropnest/${userId}`;
+        const imageKitFolderPath = parentId ? `/dropnest/${userId}/${parentId}` : `/dropnest/${userId}`;
 
         // Upload to ImageKit
         const uploadResponse = await imageKit.upload({
           file: Buffer.from(buffer),
           fileName: file.name,
-          folder: folderPath,
+          folder: imageKitFolderPath,
           useUniqueFileName: true
         });
 
