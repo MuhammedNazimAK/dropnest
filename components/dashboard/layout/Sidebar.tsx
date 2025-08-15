@@ -12,7 +12,6 @@ interface SidebarProps {
   setActiveFilter: (filter: 'all' | 'starred' | 'trash') => void;
   onFolderCreated: () => void;
   onUploadClick: () => void;
-  files: Array<{ size: number }>;
   createFolder: (name: string, parentId: string | null) => Promise<any>;
   currentFolderId: string | null;
 }
@@ -27,7 +26,7 @@ const formatBytes = (bytes: number, decimals = 2) => {
 };
 
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeFilter, setActiveFilter, onFolderCreated, onUploadClick, files, createFolder, currentFolderId }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ activeFilter, setActiveFilter, onFolderCreated, onUploadClick, createFolder, currentFolderId }) => {
   const [isCreating, setIsCreating] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
 

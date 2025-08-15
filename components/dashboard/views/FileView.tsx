@@ -17,6 +17,7 @@ interface FileViewProps {
   onDeletePermanently: (fileId: string) => void;
   onRename: (fileId: string, newName: string) => void;
   onMove: (file: Required<FileType>) => void;
+  onCopy: (file: Required<FileType>) => void;
   onDownload: (file: FileType) => void;
   onUploadClick: () => void;
 }

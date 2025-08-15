@@ -389,6 +389,7 @@ export const useFileManagement = (initialFiles: NewFile[], userId: string) => {
 
   return {
     files,
+    setFiles,
     ...state,
     handleFileUpload,
     toggleStar,

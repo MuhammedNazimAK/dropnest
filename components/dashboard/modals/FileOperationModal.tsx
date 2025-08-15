@@ -6,11 +6,13 @@ import type { FolderTreeNode } from '@/app/api/folders/tree/route';
 import { FolderTree } from '@/components/dashboard/ui/FolderTree';
 import { Loader2 } from 'lucide-react';
 
-interface MoveModalProps {
+interface FileOperationModalProps {
   isOpen: boolean;
   onClose: () => void;
-  itemToMove: Required<FileType> | null;
-  onConfirmMove: (fileId: string, targetFolderId: string | null) => void;
+  item: Required<FileType> | null;
+  onConfirm: (fileId: string, targetFolderId: string | null) => void;
+  title: 'Move' | 'Copy';
+  confirmButtonText: string;
 }
 
 // Function to get all descendant IDs of a folder node
@@ -37,7 +39,7 @@ const getDescendantIds = (nodeId: string, tree: FolderTreeNode[]): Set<string> =
     return ids;
 };
 
-export const MoveModal: React.FC<MoveModalProps> = ({ isOpen, onClose, itemToMove, onConfirmMove }) => {
+export const FileOperationModal: React.FC<FileOperationModalProps> = ({ isOpen, onClose, item, onConfirm, title, confirmButtonText }) => {
     const [folderTree, setFolderTree] = useState<FolderTreeNode[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
@@ -50,35 +52,35 @@ export const MoveModal: React.FC<MoveModalProps> = ({ isOpen, onClose, itemToMov
                 .then(data => {
                     setFolderTree(data);
                     // Pre-select the item's current parent
-                    setSelectedFolderId(itemToMove?.parentId ?? null);
+                    setSelectedFolderId(item?.parentId ?? null);
                 })
                 .catch(err => console.error("Failed to load folder tree:", err))
                 .finally(() => setIsLoading(false));
         }
-    }, [isOpen, itemToMove]);
+    }, [isOpen, item]);
 
     const disabledIds = useMemo(() => {
-        if (!itemToMove || !itemToMove.isFolder) return new Set<string>();
+        if (!item || !item.isFolder || title !== 'Move') return new Set<string>();
         // Disable the folder itself and all of its children
-        const ids = getDescendantIds(itemToMove.id, folderTree);
-        ids.add(itemToMove.id);
+        const ids = getDescendantIds(item.id, folderTree);
+        ids.add(item.id);
         return ids;
-    }, [itemToMove, folderTree]);
+    }, [item, folderTree, title]);
     
     const handleConfirm = () => {
-        if (!itemToMove) return;
-        onConfirmMove(itemToMove.id, selectedFolderId);
+        if (!item) return;
+        onConfirm(item.id, selectedFolderId);
         onClose();
     };
 
-    const isMoveButtonDisabled = itemToMove?.parentId === selectedFolderId || selectedFolderId === itemToMove?.id;
+    const isConfirmButtonDisabled = title === 'Move' && (item?.parentId === selectedFolderId || selectedFolderId === item?.id);
 
     if (!isOpen) return null;
 
     return (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center" onClick={onClose}>
             <div className="w-full max-w-md bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6" onClick={e => e.stopPropagation()}>
-                <h2 className="text-xl font-bold">Move "{itemToMove?.name}"</h2>
+                <h2 className="text-xl font-bold">{title} "{item?.name}</h2>
                 <div className="mt-4 h-64 overflow-y-auto border dark:border-gray-700 rounded-md p-2">
                     {isLoading ? (
                         <div className="flex items-center justify-center h-full">
@@ -97,8 +99,8 @@ export const MoveModal: React.FC<MoveModalProps> = ({ isOpen, onClose, itemToMov
                     <button onClick={onClose} className="px-4 py-2 text-sm font-medium bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600">
                         Cancel
                     </button>
-                    <button onClick={handleConfirm} disabled={isMoveButtonDisabled || isLoading} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed">
-                        Move Here
+                    <button onClick={handleConfirm} disabled={isConfirmButtonDisabled || isLoading} className="...">
+                        {confirmButtonText}
                     </button>
                 </div>
             </div>

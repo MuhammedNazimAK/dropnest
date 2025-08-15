@@ -135,6 +135,7 @@ export function useFolderManagement() {
     }
   }, [showNotification]);
 
+
   // Move file to folder
   const moveFile = useCallback(async (fileId: string, targetFolderId: string | null) => {
     try {
@@ -171,6 +172,32 @@ export function useFolderManagement() {
     }
   }, [showNotification]);
 
+
+   const copyFile = useCallback(async (fileId: string, targetFolderId: string | null) => {
+    try {
+      const response = await fetch(`/api/files/${fileId}/copy`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetFolderId })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to copy file');
+      }
+      
+      showNotification('success', data.message);
+      // Return the new file data so the UI can add it to the state
+      return data.file;
+
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to copy file';
+      showNotification('error', message);
+      throw error;
+    }
+  }, [showNotification]);
+
+
   // Navigate up in breadcrumbs
   const navigateToBreadcrumb = useCallback((index: number) => {
     const targetBreadcrumb = folderState.breadcrumbs[index];
@@ -191,5 +218,6 @@ export function useFolderManagement() {
     createFolder,
     deleteFolder,
     moveFile,
+    copyFile
   };
 }

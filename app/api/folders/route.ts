@@ -56,14 +56,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Build folder path
-    let folderPath = name;
-    if (parentId && parentFolder) {
-      folderPath = `${parentFolder.path}/${name}`;
+    const newFolderId = uuidv4();
+    let folderPath = newFolderId;
+
+    if (parentFolder) {
+      // For a subfolder, the path is parent's_path/new_folder's_id
+      folderPath = `${parentFolder.path}/${newFolderId}`;
     }
 
     // Create folder
     const newFolder = await db.insert(files).values({
-      id: uuidv4(),
+      id: newFolderId,
       name,
       path: folderPath,
       size: 0,

@@ -4,7 +4,6 @@ import { auth } from "@clerk/nextjs/server";
 import { and, eq } from "drizzle-orm";
 import ImageKit from "imagekit";
 import { NextRequest, NextResponse } from "next/server";
-import { v4 as uuidv4 } from "uuid";
 
 const imageKit = new ImageKit({
   publicKey: process.env.IMAGEKIT_PUBLIC_KEY || "",
@@ -26,14 +25,16 @@ export async function POST(request: NextRequest) {
     const parentIdValue = formData.get("parentId") as string;
     const parentId = (parentIdValue && parentIdValue !== 'null') ? parentIdValue : null;
 
-    
+
     if (!uploadFiles || uploadFiles.length === 0) {
       return NextResponse.json({ error: "No files provided" }, { status: 400 });
     }
 
+    let imageKitFolderPath = `/dropnest/${userId}`
+
     // Validate parent folder if provided
     if (parentId) {
-      const [parentFolder] = await db.select()
+      const [parentFolder] = await db.select({ path: files.path })
         .from(files)
         .where(
           and(
@@ -46,6 +47,8 @@ export async function POST(request: NextRequest) {
       if (!parentFolder) {
         return NextResponse.json({ error: "Invalid parent folder" }, { status: 400 });
       }
+
+      imageKitFolderPath = `/dropnest/${userId}/${parentFolder.path}`;
     }
 
     const uploadedFiles = [];
@@ -77,8 +80,6 @@ export async function POST(request: NextRequest) {
 
         const buffer = await file.arrayBuffer();
 
-        const imageKitFolderPath = parentId ? `/dropnest/${userId}/${parentId}` : `/dropnest/${userId}`;
-
         // Upload to ImageKit
         const uploadResponse = await imageKit.upload({
           file: Buffer.from(buffer),
@@ -88,9 +89,9 @@ export async function POST(request: NextRequest) {
         });
 
         if (!uploadResponse || !uploadResponse.fileId) {
-            console.error("!!! FAILED to get fileId from ImageKit response for file:", file.name);
-            // Skip this file if the response is invalid
-            continue; 
+          console.error("!!! FAILED to get fileId from ImageKit response for file:", file.name);
+          // Skip this file if the response is invalid
+          continue;
         }
 
         // Save to database
@@ -98,7 +99,7 @@ export async function POST(request: NextRequest) {
           name: uploadResponse.name,
           path: uploadResponse.filePath,
           size: uploadResponse.size,
-          type: uploadResponse.fileType,
+          type: uploadResponse.fileType || file.type,
           fileUrl: uploadResponse.url,
           thumbnailUrl: uploadResponse.thumbnailUrl || null,
           fileIdInImageKit: uploadResponse.fileId,
@@ -112,7 +113,7 @@ export async function POST(request: NextRequest) {
         const [newlyCreatedFile] = await db.insert(files).values(fileData).returning();
 
         if (newlyCreatedFile) {
-            uploadedFiles.push(newlyCreatedFile);
+          uploadedFiles.push(newlyCreatedFile);
         }
 
       } catch (error) {

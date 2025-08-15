@@ -2,7 +2,7 @@
 
 import React from 'react';
 import type { File as FileType } from '@/lib/db/schema';
-import { Folder, FileText, Star, MoreVertical, Trash2, Download, PenSquare, RefreshCw, Move } from 'lucide-react';
+import { Folder, FileText, Star, MoreVertical, Trash2, Download, PenSquare, RefreshCw, Move, Copy } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { clsx } from 'clsx';
@@ -23,6 +23,7 @@ interface FileCardProps {
    * A callback function for when the card is double-clicked (used for opening folders).
    */
   onMove: (file: Required<FileType>) => void;
+  onCopy: (file: Required<FileType>) => void;
   onDoubleClick: () => void;
   onToggleStar: (fileId: string, isStarred: boolean) => void;
   onMoveToTrash: (fileId: string) => void;
@@ -30,10 +31,9 @@ interface FileCardProps {
   onDownload: (file: FileType) => void;
   onRestoreFile: (fileId: string) => void;
   onDeletePermanently: (fileId: string) => void;
-
 }
 
-export const FileCard: React.FC<FileCardProps> = ({ file, onMove, onDoubleClick, activeFilter, onDownload, onToggleStar, onRename, onMoveToTrash, onRestoreFile, onDeletePermanently }) => {
+export const FileCard: React.FC<FileCardProps> = ({ file, onMove, onCopy, onDoubleClick, activeFilter, onDownload, onToggleStar, onRename, onMoveToTrash, onRestoreFile, onDeletePermanently }) => {
 
   const {
     attributes,
@@ -143,6 +143,10 @@ export const FileCard: React.FC<FileCardProps> = ({ file, onMove, onDoubleClick,
                     <DropdownMenuItem onClick={() => onMove(file)}>
                       <Move className="w-4 h-4 mr-2" />
                       <span>Move</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onCopy(file)}>
+                      <Copy className="w-4 h-4 mr-2" /> {/* You'll need to import the Copy icon from lucide-react */}
+                      <span>Make a copy</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem onSelect={handleRename}>
                       <PenSquare className="mr-2 h-4 w-4" />

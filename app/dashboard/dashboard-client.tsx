@@ -11,9 +11,10 @@ import { Header } from '@/components/dashboard/layout/Header';
 import { MainContent } from '@/components/dashboard/layout/MainContent';
 import { FileView } from '@/components/dashboard/views/FileView';
 import { UploadModal } from '@/components/dashboard/upload/UploadModal';
-import { MoveModal } from '@/components/dashboard/modals/MoveModal';
+import { FileOperationModal } from '@/components/dashboard/modals/FileOperationModal';
 import { FileCard } from '@/components/dashboard/ui/FileCard';
 import { FileListRow } from '@/components/dashboard/ui/FileListRow';
+
 
 import {
   DndContext,
@@ -40,9 +41,9 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<'all' | 'starred' | 'trash'>('all');
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
-  const [itemToMove, setItemToMove] = useState<Required<File> | null>(null);
   const [activeDragItem, setActiveDragItem] = useState<Active | null>(null);
+  const [modalMode, setModalMode] = useState<'move' | 'copy' | null>(null);
+  const [activeItem, setActiveItem] = useState<Required<File> | null>(null);
 
 
   // --- DATA HOOKS ---
@@ -52,6 +53,7 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
     files,
     isUploading,
     uploadProgress,
+    setFiles,
     handleFileUpload,
     toggleStar,
     moveToTrash,
@@ -71,6 +73,7 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
     createFolder,
     deleteFolder,
     moveFile,
+    copyFile
   } = useFolderManagement();
 
   // --- DERIVED STATE & MEMOIZATION ---
@@ -113,21 +116,37 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
     setIsUploadModalOpen(false);
   }
 
-  const handleOpenMoveModal = (file: Required<File>) => {
-    setItemToMove(file);
-    setIsMoveModalOpen(true);
+  const handleOpenModal = (item: Required<File>, mode: 'move' | 'copy') => {
+    setActiveItem(item);
+    setModalMode(mode);
   };
 
-  const handleConfirmMove = async (fileId: string, targetFolderId: string | null) => {
-    await moveFile(fileId, targetFolderId);
-    // Refresh the view after the move is complete
+  const handleCloseModal = () => {
+    setModalMode(null);
+    setActiveItem(null);
+  };
+
+  const handleConfirmOperation = async (fileId: string, targetFolderId: string | null) => {
+    // Decide which API to call based on the modal's mode
+    if (modalMode === 'move') {
+      await moveFile(fileId, targetFolderId);
+    }
+    else if (modalMode === 'copy') {
+      const newFile = await copyFile(fileId, targetFolderId);
+      // If the copy was made into the current folder, optimistically update the UI
+      if (newFile && newFile.parentId === currentFolderId) {
+        setFiles(prev => [...prev, newFile]);
+      }
+    }
+
+    // Always refresh for full consistency and close the modal
     await refreshFiles(currentFolderId);
-    setIsMoveModalOpen(false);
+    handleCloseModal();
   };
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      // This is the activation constraint we wanted.
+      // This is the activation constraint.
       // Require the mouse to move by 10 pixels before activating a drag.
       // This allows for simple clicks and double-clicks to work.
       activationConstraint: {
@@ -137,7 +156,7 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
     useSensor(KeyboardSensor, {
       coordinateGetter: (event) => {
         // ... keyboard sensor configuration ...
-        return { x: 0, y: 0 }; // Example, adjust as needed for accessibility
+        return { x: 0, y: 0 };
       },
     })
   );
@@ -191,10 +210,8 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
         setActiveFilter={setActiveFilter}
         onFolderCreated={handleFolderAction}
         onUploadClick={() => setIsUploadModalOpen(true)}
-        allUserFiles={initialFiles}
         createFolder={createFolder}
         currentFolderId={currentFolderId}
-        files={files}
       />
 
       <div className="flex flex-col flex-1 w-full overflow-hidden">
@@ -226,7 +243,8 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
               onRestoreFile={restoreFile}
               onDeletePermanently={deleteFilePermanently}
               onRename={renameItem}
-              onMove={handleOpenMoveModal}
+              onMove={(file) => handleOpenModal(file, 'move')}
+              onCopy={(file) => handleOpenModal(file, 'copy')}
               onDownload={(file) => window.open(file.fileUrl, '_blank')} // Simple download handler
               onUploadClick={() => setIsUploadModalOpen(true)}
             />
@@ -241,6 +259,7 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
                   file={activeDragItem.data.current?.file}
                   // dummy functions for props that aren't used in the overlay's appearance
                   onMove={() => { }}
+                  onCopy={() => { }}
                   onDoubleClick={() => { }}
                   activeFilter={'all'}
                   onDownload={() => { }}
@@ -255,6 +274,7 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
                   <FileListRow
                     file={activeDragItem.data.current?.file}
                     onMove={() => { }}
+                    onCopy={() => { }}
                     onDoubleClick={() => { }}
                     activeFilter={'all'}
                     onDownload={() => { }}
@@ -281,11 +301,13 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
         uploadProgress={uploadProgress}
         currentFolderId={currentFolderId}
       />
-      <MoveModal
-        isOpen={isMoveModalOpen}
-        onClose={() => setIsMoveModalOpen(false)}
-        itemToMove={itemToMove}
-        onConfirmMove={handleConfirmMove}
+      <FileOperationModal
+        isOpen={modalMode !== null}
+        onClose={handleCloseModal}
+        item={activeItem}
+        onConfirm={handleConfirmOperation}
+        title={modalMode === 'move' ? 'Move' : 'Copy'}
+        confirmButtonText={modalMode === 'move' ? 'Move Here' : 'Copy Here'}
       />
     </div>
   );
