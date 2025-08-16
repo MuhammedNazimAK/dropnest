@@ -7,7 +7,7 @@ import { motion } from 'framer-motion';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { clsx } from 'clsx';
 
-// DropdownMenu components would be from a UI library like Shadcn/UI
+// DropdownMenu components from a UI library Shadcn/UI
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,9 +19,6 @@ import {
 interface FileCardProps {
   file: Required<FileType>;
   activeFilter: 'all' | 'starred' | 'trash';
-  /**
-   * A callback function for when the card is double-clicked (used for opening folders).
-   */
   onMove: (file: Required<FileType>) => void;
   onCopy: (file: Required<FileType>) => void;
   onDoubleClick: () => void;
@@ -31,9 +28,11 @@ interface FileCardProps {
   onDownload: (file: FileType) => void;
   onRestoreFile: (fileId: string) => void;
   onDeletePermanently: (fileId: string) => void;
+  isSelected: boolean;
+  onSelect: (event: React.MouseEvent) => void;
 }
 
-export const FileCard: React.FC<FileCardProps> = ({ file, onMove, onCopy, onDoubleClick, activeFilter, onDownload, onToggleStar, onRename, onMoveToTrash, onRestoreFile, onDeletePermanently }) => {
+export const FileCard: React.FC<FileCardProps> = ({ file, isSelected, onSelect, onMove, onCopy, onDoubleClick, activeFilter, onDownload, onToggleStar, onRename, onMoveToTrash, onRestoreFile, onDeletePermanently }) => {
 
   const {
     attributes,
@@ -94,6 +93,7 @@ export const FileCard: React.FC<FileCardProps> = ({ file, onMove, onCopy, onDoub
       ref={setRefs}
       {...listeners}
       {...attributes}
+      onClick={onSelect}
       onDoubleClick={onDoubleClick}
       variants={cardVariants}
       initial="hidden"
@@ -103,6 +103,8 @@ export const FileCard: React.FC<FileCardProps> = ({ file, onMove, onCopy, onDoub
         "group relative rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/50",
         "transition-all duration-200 cursor-pointer",
         "h-60 w-full",
+        { "border-blue-500 ring-2 ring-blue-500": isSelected }, // Style for selected items
+        { "border-gray-200 dark:border-gray-800": !isSelected },
         { "cursor-grab": !isDragging },
         { "opacity-30": isDragging },
         // The ring effect is a great indicator, let's keep it.

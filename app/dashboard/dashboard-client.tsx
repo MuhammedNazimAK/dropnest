@@ -14,7 +14,7 @@ import { UploadModal } from '@/components/dashboard/upload/UploadModal';
 import { FileOperationModal } from '@/components/dashboard/modals/FileOperationModal';
 import { FileCard } from '@/components/dashboard/ui/FileCard';
 import { FileListRow } from '@/components/dashboard/ui/FileListRow';
-
+import { BulkActionsToolbar } from '@/components/ui/BulkActionsToolbar';
 
 import {
   DndContext,
@@ -44,6 +44,8 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
   const [activeDragItem, setActiveDragItem] = useState<Active | null>(null);
   const [modalMode, setModalMode] = useState<'move' | 'copy' | null>(null);
   const [activeItem, setActiveItem] = useState<Required<File> | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [lastselectedId, setLastSelectedId] = useState<string | null>(null);
 
 
   // --- DATA HOOKS ---
@@ -76,7 +78,7 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
     copyFile
   } = useFolderManagement();
 
-  // --- DERIVED STATE & MEMOIZATION ---
+  // --- STATE & MEMOIZATION ---
 
   // Memoize the filtered files to prevent re-calculating on every render
   const filteredFiles = useMemo(() => {
@@ -94,6 +96,62 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
       .filter(file => file.name.toLowerCase().includes(searchQuery.toLowerCase()));
   }, [files, currentFolderId, activeFilter, searchQuery]);
 
+
+  const handleSelection = (fileId: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+
+    const newSelectedIds = new Set(selectedIds);
+
+    if (event.ctrlKey || event.metaKey) { // For Ctrl/Cmd+Click
+      // Toggle selection for the clicked item
+      if (newSelectedIds.has(fileId)) {
+        newSelectedIds.delete(fileId);
+      } else {
+        newSelectedIds.add(fileId);
+      }
+      setLastSelectedId(fileId);
+    } else if (event.shiftKey && lastselectedId) { // For Shift+Click
+      // Select a range of items
+      const lastIndex = filteredFiles.findIndex(f => f.id === lastselectedId);
+      const currentIndex = filteredFiles.findIndex(f => f.id === fileId);
+      const start = Math.min(lastIndex, currentIndex);
+      const end = Math.max(lastIndex, currentIndex);
+
+      if (start !== -1 && end !== -1) {
+        for (let i = start; i <= end; i++) {
+          newSelectedIds.add(filteredFiles[i].id);
+        }
+      }
+    } else { // For a simple click
+      // Select only the clicked item
+      newSelectedIds.clear();
+      newSelectedIds.add(fileId);
+      setLastSelectedId(fileId);
+    }
+
+    setSelectedIds(newSelectedIds);
+  };
+
+  const handleBulkDelete = async () => {
+    // We'll need a new bulk-delete API route, but it will call our existing service
+    const ids = Array.from(selectedIds);
+    // await fetch('/api/files/bulk-delete', { method: 'POST', body: JSON.stringify({ itemIds: ids }) });
+    // For now, let's just delete them one by one (less efficient but uses existing code)
+    const deletePromises = Array.from(selectedIds).map(id => deleteFilePermanently(id));
+    await Promise.all(deletePromises);
+    setSelectedIds(new Set()); // Clear selection
+    await refreshFiles(currentFolderId);
+  };
+
+  const handleBulkMove = () => {
+    // Open the modal, but we need a way to tell it we're moving multiple items.
+    // For now, we can just open it for the last selected item as a placeholder.
+    const lastId = Array.from(selectedIds).pop();
+    if (lastId) {
+      const item = files.find(f => f.id === lastId);
+      if (item) handleOpenModal(item as Required<File>, 'move');
+    }
+  };
 
   // --- EVENT HANDLERS ---
 
@@ -196,6 +254,11 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
   }, [isDarkMode]);
 
   useEffect(() => {
+    setSelectedIds(new Set());
+    setLastSelectedId(null);
+  }, [currentFolderId, activeFilter]);
+
+  useEffect(() => {
     refreshFiles(currentFolderId);
   }, [currentFolderId, refreshFiles]);
 
@@ -233,6 +296,13 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
           onDragEnd={handleDragEnd}>
           {/* ===== MAIN CONTENT AREA ===== */}
           <MainContent>
+          <BulkActionsToolbar 
+                            selectedCount={selectedIds.size}
+                            onDelete={handleBulkDelete}
+                            onMove={handleBulkMove}
+                            onCopy={() => { /* Similar logic to move */ }}
+                            onClearSelection={() => setSelectedIds(new Set())}
+                        />
             <FileView
               files={filteredFiles as Required<File>[]}
               viewMode={viewMode}
@@ -268,6 +338,8 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
                   onMoveToTrash={() => { }}
                   onRestoreFile={() => { }}
                   onDeletePermanently={() => { }}
+                  selectedIds={selectedIds}
+                  onFileSelect={handleSelection}
                 />
               ) : (
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg">
@@ -283,6 +355,8 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
                     onMoveToTrash={() => { }}
                     onRestoreFile={() => { }}
                     onDeletePermanently={() => { }}
+                    selectedIds={selectedIds}
+                    onFileSelect={handleSelection}
                   />
                 </div>
               )

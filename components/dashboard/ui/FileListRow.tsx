@@ -30,9 +30,11 @@ interface FileListRowProps {
     onDownload: (fileId: FileType) => void;
     onRestoreFile: (fileId: string) => void;
     onDeletePermanently: (fileId: string) => void;
+    isSelected: boolean;
+    onSelect: (event: React.MouseEvent) => void;
 }
 
-export const FileListRow: React.FC<FileListRowProps> = ({ file, onMove, onCopy, onDoubleClick, activeFilter, onToggleStar, onMoveToTrash, onRename, onDownload, onRestoreFile, onDeletePermanently }) => {
+export const FileListRow: React.FC<FileListRowProps> = ({ file, isSelected, onSelect, onMove, onCopy, onDoubleClick, activeFilter, onToggleStar, onMoveToTrash, onRename, onDownload, onRestoreFile, onDeletePermanently }) => {
 
     const {
         attributes,
@@ -89,12 +91,15 @@ export const FileListRow: React.FC<FileListRowProps> = ({ file, onMove, onCopy, 
             ref={setRefs}
             {...listeners}
             {...attributes}
+            onClick={onSelect}
             onDoubleClick={onDoubleClick}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.3 }}
             className={clsx(
                 "group grid grid-cols-12 gap-4 items-center w-full px-4 py-2 rounded-lg transition-colors duration-150 cursor-pointer",
+                { "border-blue-500 ring-2 ring-blue-500": isSelected }, // Style for selected items
+                { "border-gray-200 dark:border-gray-800": !isSelected },
                 // Apply styles for dragging state
                 { "opacity-40": isDragging },
                 // Apply a ring for a valid drop target (folders only)

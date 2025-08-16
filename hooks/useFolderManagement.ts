@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
-import { useNotification } from '@/contexts/NotificationContext';
+import { toast } from 'sonner';
+
 
 interface FolderState {
   currentFolderId: string | null;
@@ -13,8 +14,6 @@ export function useFolderManagement() {
     breadcrumbs: [{ id: null, name: 'Home' }],
     isLoading: false
   });
-
-  const { showNotification } = useNotification();
 
   // Navigate to folder
   const navigateToFolder = useCallback(async (folderId: string | null, folderName?: string) => {
@@ -51,10 +50,9 @@ export function useFolderManagement() {
 
     } catch (error) {
       console.error('Error navigating to folder:', error);
-      showNotification('error', 'Failed to open folder');
       setFolderState(prev => ({ ...prev, isLoading: false }));
     }
-  }, [showNotification]);
+  }, []);
 
   // Build breadcrumb trail
   const buildBreadcrumbs = async (folderId: string): Promise<Array<{ id: string | null; name: string }>> => {
@@ -85,6 +83,9 @@ export function useFolderManagement() {
 
   // Create folder
   const createFolder = useCallback(async (name: string, parentId: string | null) => {
+
+    const toastId = toast.loading("Folder creating...")
+
     try {
       const response = await fetch('/api/folders', {
         method: 'POST',
@@ -101,19 +102,22 @@ export function useFolderManagement() {
         throw new Error(data.error || 'Failed to create folder');
       }
 
-      showNotification('success', `Folder "${name}" created successfully`);
+      toast.success(data.message, { id: toastId });
       return data.folder;
 
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to create folder';
-      showNotification('error', message);
+      toast.error(message, { id: toastId });
       throw error;
     }
-  }, [folderState.currentFolderId, showNotification]);
+  }, [folderState.currentFolderId]);
 
 
   // Delete folder
   const deleteFolder = useCallback(async (folderId: string) => {
+
+    const toastId = toast.loading("deleting folder...");
+
     try {
       const response = await fetch(`/api/folders/${folderId}`, {
         method: 'DELETE'
@@ -125,19 +129,22 @@ export function useFolderManagement() {
         throw new Error(data.error || 'Failed to delete folder');
       }
 
-      showNotification('success', 'Folder moved to trash');
+      toast.success(data.message, { id: toastId });
       return data.folder;
 
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to delete folder';
-      showNotification('error', message);
+      toast.error(message, { id: toastId });
       throw error;
     }
-  }, [showNotification]);
+  }, []);
 
 
   // Move file to folder
   const moveFile = useCallback(async (fileId: string, targetFolderId: string | null) => {
+
+    const toastId = toast.loading("Moving item...");
+
     try {
       const response = await fetch(`/api/files/${fileId}/move`, {
         method: 'PATCH',
@@ -161,19 +168,21 @@ export function useFolderManagement() {
         throw new Error(data.error || 'Failed to move file');
       }
 
-      const targetName = targetFolderId ? 'folder' : 'root';
-      showNotification('success', `File moved to ${targetName}`);
+      toast.success(data.message, { id: toastId });
       return data.file;
 
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to move file';
-      showNotification('error', message);
+      toast.error(message, { id: toastId });
       throw error;
     }
-  }, [showNotification]);
+  }, []);
 
 
    const copyFile = useCallback(async (fileId: string, targetFolderId: string | null) => {
+
+    const toastId = toast.loading("Copying file...");
+
     try {
       const response = await fetch(`/api/files/${fileId}/copy`, {
         method: 'POST',
@@ -186,16 +195,16 @@ export function useFolderManagement() {
         throw new Error(data.message || 'Failed to copy file');
       }
       
-      showNotification('success', data.message);
+      toast.success(data.message, { id: toastId });
       // Return the new file data so the UI can add it to the state
       return data.file;
 
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to copy file';
-      showNotification('error', message);
+      toast.error(message, { id: toastId });
       throw error;
     }
-  }, [showNotification]);
+  }, []);
 
 
   // Navigate up in breadcrumbs

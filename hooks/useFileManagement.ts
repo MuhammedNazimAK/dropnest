@@ -1,8 +1,6 @@
 import { useCallback, useState } from 'react';
-import { useNotification } from '@/contexts/NotificationContext';
 import type { NewFile } from '@/lib/db/schema';
-import { fi } from 'zod/v4/locales';
-
+import { toast } from 'sonner';
 
 interface FileUploadResponse {
   success: boolean;
@@ -31,9 +29,10 @@ export const useFileManagement = (initialFiles: NewFile[], userId: string) => {
     uploadProgress: 0,
   });
 
-  const { showNotification } = useNotification();
-
   const handleFileUpload = async (uploadFiles: FileList, currentFolderId: string | null) => {
+    
+    const toastId = toast.loading(`Uploading ${uploadFiles.length} file(s)...`);
+    
     setState(prev => ({ ...prev, isUploading: true, uploadProgress: 0 }));
 
     try {
@@ -61,18 +60,16 @@ export const useFileManagement = (initialFiles: NewFile[], userId: string) => {
       if (data.success && data.uploadedFiles) {
         setFiles(prev => [...prev, ...data.uploadedFiles]);
         setState(prev => ({ ...prev, uploadProgress: 100 }));
-
-        const uploadedCount = data.uploadedFiles.length;
-        showNotification('success', `Successfully uploaded ${uploadedCount} file${uploadedCount !== 1 ? 's' : ''}`);
+        toast.success(data.message, { id: toastId });
 
         // Show warnings if there were any errors
         if (data.errors && data.errors.length > 0) {
-          showNotification('warning', `Some files failed to upload: ${data.errors.join(', ')}`);
+          toast.error(data.errors, { id: toastId });
         }
       }
     } catch (error) {
       console.error('Upload failed:', error);
-      showNotification('error', error instanceof Error ? error.message : 'Upload failed');
+      toast.error(error instanceof Error ? error.message : 'Upload failed', { id: toastId });
     } finally {
       setState(prev => ({ ...prev, isUploading: false }));
     }
@@ -103,7 +100,7 @@ export const useFileManagement = (initialFiles: NewFile[], userId: string) => {
         throw new Error(data.message || 'Failed to update file');
       }
 
-      showNotification('success', isStarring ? 'File starred' : 'File unstarred');
+      toast.success(data.message);
 
       // Update with server response
       setFiles(prevFiles => prevFiles.map(file =>
@@ -145,7 +142,7 @@ export const useFileManagement = (initialFiles: NewFile[], userId: string) => {
         throw new Error(data.message || 'Failed to move to trash');
       }
 
-      showNotification('success', 'File trashed');
+      toast.success(data.message);
 
       // Update with server response
       setFiles(prevFiles => prevFiles.map(file =>
@@ -157,7 +154,7 @@ export const useFileManagement = (initialFiles: NewFile[], userId: string) => {
       // Revert optimistic update
       setFiles(previousFiles);
       console.error('Failed to move to trash:', error);
-      showNotification('error', error instanceof Error ? error.message : 'Failed to trash file');
+      toast.error(error instanceof Error ? error.message : 'Failed to trash file');
 
     } finally {
       setState(prev => ({ ...prev, isOperating: false }));
@@ -186,7 +183,7 @@ export const useFileManagement = (initialFiles: NewFile[], userId: string) => {
         throw new Error(data.message || 'Failed to restore file');
       }
 
-      showNotification('success', 'File restored');
+      toast.success(data.message);
 
       // Update with server response
       setFiles(prevFiles => prevFiles.map(file =>
@@ -198,7 +195,7 @@ export const useFileManagement = (initialFiles: NewFile[], userId: string) => {
       // Revert optimistic update
       setFiles(previousFiles);
       console.error('Failed to restore file:', error);
-      showNotification('error', error instanceof Error ? error.message : 'Failed to restore file');
+      toast.error(error instanceof Error ? error.message : 'Failed to restore file');
 
     } finally {
       setState(prev => ({ ...prev, isOperating: false }));
@@ -221,13 +218,13 @@ export const useFileManagement = (initialFiles: NewFile[], userId: string) => {
         throw new Error(data.message || 'Failed to empty trash');
       }
 
-      showNotification('success', 'Trash emptied successfully');
+      toast.success(data.message)
 
       setFiles(files.filter(file => !file.isTrash));
 
     } catch (error) {
       console.error('Failed to empty trash:', error);
-      showNotification('error', error instanceof Error ? error.message : 'Failed to empty trash');
+      toast.error(error instanceof Error ? error.message : 'Failed to empty trash');
 
     } finally {
       setState(prev => ({ ...prev, isOperating: false }));
@@ -262,14 +259,14 @@ export const useFileManagement = (initialFiles: NewFile[], userId: string) => {
         setFiles(prevFiles => prevFiles.filter(file => file.id !== fileId));
       }
 
-      showNotification('success', 'Item(s) deleted permanently');
+      toast.success(data.message)
 
     } catch (error) {
 
       // Revert optimistic update on failure
       setFiles(previousFiles);
       console.error('Failed to delete file permanently:', error);
-      showNotification('error', error instanceof Error ? error.message : 'Failed to delete file');
+      toast.error(error instanceof Error ? error.message : 'Failed to delete file');
 
     } finally {
 
@@ -291,16 +288,16 @@ export const useFileManagement = (initialFiles: NewFile[], userId: string) => {
 
     } catch (error) {
       console.error('Failed to refresh files:', error);
-      showNotification('error', 'Failed to refresh files');
+      toast.error('Failed to refresh files');
     }
-  }, [showNotification]);
+  }, []);
 
 
   const renameItem = async (fileId: string, newName: string) => {
 
     const fileToRename = files.find(f => f.id === fileId);
     if (!fileToRename) {
-      showNotification('error', 'File not found');
+      toast.error('File not found');
       return;
     }
 
@@ -319,7 +316,7 @@ export const useFileManagement = (initialFiles: NewFile[], userId: string) => {
 
     // Prevent renaming to an empty string
     if (!finalName) {
-      showNotification('error', 'Name cannot be empty');
+      toast.error('Name cannot be empty');
       return;
     }
 
@@ -341,11 +338,11 @@ export const useFileManagement = (initialFiles: NewFile[], userId: string) => {
       if (!response.ok) throw new Error(data.message || 'Failed to rename');
 
       setFiles(prev => prev.map(f => (f.id === fileId ? data.file : f)));
-      showNotification('success', 'Item renamed successfully');
+      toast.success(data.message)
 
     } catch (error) {
       setFiles(previousFiles);
-      showNotification('error', error instanceof Error ? error.message : 'Rename failed');
+      toast.error(error instanceof Error ? error.message : 'Rename failed');
 
     } finally {
       setState(prev => ({ ...prev, isOperating: true }));
@@ -372,7 +369,7 @@ export const useFileManagement = (initialFiles: NewFile[], userId: string) => {
         throw new Error(data.error || 'Failed to move item');
       }
       
-      showNotification('success', data.message);
+      toast.success(data.message)
       
       // No need to add the file back manually. The parent component will
       // trigger a refresh of the folder contents.
@@ -380,7 +377,7 @@ export const useFileManagement = (initialFiles: NewFile[], userId: string) => {
     } catch (error) {
       // Revert on failure
       setFiles(previousFiles);
-      showNotification('error', error instanceof Error ? error.message : 'Failed to move item');
+      toast.error(error instanceof Error ? error.message : 'Failed to move item');
     } finally {
       setState(prev => ({ ...prev, isOperating: false }));
     }

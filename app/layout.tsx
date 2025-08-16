@@ -4,6 +4,7 @@ import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Providers } from "./providers";
 import { ThemeWrapper } from "./ThemeWrapper";
+import { Toaster } from "sonner";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -23,6 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Providers>
               <ThemeWrapper> {/* theme changes inside here */}
                 {children}
+                <Toaster position="bottom-right" richColors/>
               </ThemeWrapper>
             </Providers>
           </body>
