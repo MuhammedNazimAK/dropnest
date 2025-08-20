@@ -1,0 +1,47 @@
+'use client';
+
+import { ThemeProvider as NextThemeProvider, type ThemeProviderProps } from 'next-themes';
+import {ImageKitProvider} from "imagekitio-next"
+import { HeroUIProvider } from '@heroui/system';
+
+
+export interface ProviderProps {
+  children: React.ReactNode;
+  themeProps?: ThemeProviderProps;
+}
+
+
+const authenticator = async () => {
+  try {
+      
+    const response = await fetch('/api/imagekit-auth');
+    const data = await response.json();
+    return data;
+
+  } catch (error) {
+    
+    console.error("Authentication error: ", error);
+    throw error;
+
+  }
+}
+
+
+
+export function Providers({ children, themeProps }: ProviderProps) {
+  return (
+    <NextThemeProvider {...themeProps}>
+      <ImageKitProvider
+        publicKey={process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY || ''}
+        urlEndpoint={process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT || ''}
+        authenticator={authenticator}
+      >
+        <HeroUIProvider>
+          {children}
+        </HeroUIProvider>
+      </ImageKitProvider>
+    </NextThemeProvider>
+  );
+}
+
+
