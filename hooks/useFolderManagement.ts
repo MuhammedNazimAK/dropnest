@@ -41,7 +41,7 @@ export function useFolderManagement() {
 
       // Build breadcrumbs by traversing up the folder hierarchy
       const breadcrumbs = await buildBreadcrumbs(folderId);
-      
+
       setFolderState({
         currentFolderId: folderId,
         breadcrumbs,
@@ -66,7 +66,7 @@ export function useFolderManagement() {
       try {
         const response = await fetch(`/api/files?folderId=${currentId}`);
         const data = await response.json();
-        
+
         if (data.folder) {
           folderChain.unshift({ id: currentId, name: data.folder.name });
           currentId = data.folder.parentId;
@@ -90,9 +90,9 @@ export function useFolderManagement() {
       const response = await fetch('/api/folders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          name, 
-          parentId: parentId 
+        body: JSON.stringify({
+          name,
+          parentId: parentId
         })
       });
 
@@ -157,7 +157,7 @@ export function useFolderManagement() {
         // Try to parse error json, but fallback if it's not there
         let errorData = { error: `Failed to move file with status: ${response.status}` };
         if (contentType && contentType.indexOf("application/json") !== -1) {
-            errorData = await response.json();
+          errorData = await response.json();
         }
         throw new Error(errorData.error);
       }
@@ -179,7 +179,7 @@ export function useFolderManagement() {
   }, []);
 
 
-   const copyFile = useCallback(async (fileId: string, targetFolderId: string | null) => {
+  const copyFile = useCallback(async (fileId: string, targetFolderId: string | null) => {
 
     const toastId = toast.loading("Copying file...");
 
@@ -194,7 +194,7 @@ export function useFolderManagement() {
       if (!response.ok) {
         throw new Error(data.message || 'Failed to copy file');
       }
-      
+
       toast.success(data.message, { id: toastId });
       // Return the new file data so the UI can add it to the state
       return data.file;
@@ -204,6 +204,28 @@ export function useFolderManagement() {
       toast.error(message, { id: toastId });
       throw error;
     }
+  }, []);
+
+
+  const bulkMoveFiles = useCallback(async (itemIds: string[], targetFolderId: string | null) => {
+
+    toast.promise(
+      fetch('/api/files/bulk-move', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ itemIds, targetFolderId }),
+
+      }).then(res => {
+        if (!res.ok) throw new Error('Failed to move items.');
+        return res.json();
+      }),
+      {
+        loading: `Moving ${itemIds.length} item(s)...`,
+        success: `Moved ${itemIds.length} item(s) successfully.`,
+        error: 'An error occurred while moving.',
+      }
+
+    );
   }, []);
 
 
@@ -220,13 +242,14 @@ export function useFolderManagement() {
     currentFolderId: folderState.currentFolderId,
     breadcrumbs: folderState.breadcrumbs,
     isLoading: folderState.isLoading,
-    
+
     // Actions
     navigateToFolder,
     navigateToBreadcrumb,
     createFolder,
     deleteFolder,
     moveFile,
-    copyFile
+    copyFile,
+    bulkMoveFiles
   };
 }

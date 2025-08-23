@@ -13,6 +13,7 @@ const imageKit = new ImageKit({
 
 export async function POST(request: NextRequest) {
   try {
+
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -93,6 +94,9 @@ export async function POST(request: NextRequest) {
           // Skip this file if the response is invalid
           continue;
         }
+
+        // in upload/route.ts, after the uploadResponse
+        console.log("NEW FILE URL:", uploadResponse.url);
 
         // Save to database
         const fileData = {

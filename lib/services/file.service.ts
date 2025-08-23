@@ -51,8 +51,13 @@ async function updateDescendantPaths(
         .where(and(eq(files.parentId, parentId), eq(files.userId, userId)));
 
     for (const child of children) {
-        const newChildPath = `${newParentPath}/${child.id}`;
+
+        const newChildPath = child.isFolder
+            ? `${newParentPath}/${child.id}`
+            : `/dropnest/${userId}/${newParentPath}/${child.name}`;
+
         await tx.update(files).set({ path: newChildPath }).where(eq(files.id, child.id));
+
         if (child.isFolder) {
             await updateDescendantPaths(tx, child.id, newChildPath, userId);
         }
@@ -193,7 +198,7 @@ export async function copyFilesService(
     const [newFileRecord] = await dbClient.insert(files).values({
         id: newFileId,
         name: uploadResponse.name, // Unique name from ImageKit
-        path: newDbPath,
+        path: uploadResponse.filePath,
         size: uploadResponse.size,
         type: uploadResponse.fileType,
         fileUrl: uploadResponse.url,
@@ -212,88 +217,71 @@ export async function moveFileService(
     fileIdToMove: string, targetFolderId: string | null, userId: string,
     dbClient: typeof db, imageKitClient: ImageKit
 ) {
+    // 1. Fetch the item to move
     const fileToMove = await dbClient.query.files.findFirst({
         where: and(eq(files.id, fileIdToMove), eq(files.userId, userId))
     });
 
+    // 2. --- VALIDATION ---
     if (!fileToMove) throw new Error("File not found.");
     if (fileIdToMove === targetFolderId) throw new Error("Cannot move a folder into itself.");
     if (fileToMove.parentId === targetFolderId) return fileToMove;
 
     const targetFolder = targetFolderId ? await dbClient.query.files.findFirst({
-        where: and(
-            eq(files.id, targetFolderId),
-            eq(files.userId, userId),
-            eq(files.isFolder, true)
-        ),
+        where: and(eq(files.id, targetFolderId), eq(files.userId, userId), eq(files.isFolder, true)),
     }) : null;
     if (targetFolderId && !targetFolder) throw new Error("Target folder not found.");
 
-    // --- Copy + Delete in ImageKit ---
-    if (!fileToMove.isFolder && fileToMove.fileIdInImageKit) {
 
-        const newImageKitFolderPath = targetFolder
-            ? `/dropnest/${userId}/${targetFolder.path}`
-            : `/dropnest/${userId}`;
+    if (!fileToMove.isFolder && fileToMove.fileIdInImageKit) {
         try {
 
-            // Step 1: Copy the file using its source path to the new destination folder
-            const copyResponse = await imageKitClient.copyFile({
-                sourceFilePath: fileToMove.path,
-                destinationPath: newImageKitFolderPath.replace(/\/$/, ''),
+            const destinationImageKitFolder = targetFolder
+                ? `/dropnest/${userId}/${targetFolder.path}`
+                : `/dropnest/${userId}`;
 
-            });
-            if (!copyResponse) {
-                throw new Error("ImageKit copy operation failed to return a response.");
-            }
-
-            // Step 2: Delete the original file using its unique ID
-            await imageKitClient.deleteFile(fileToMove.fileIdInImageKit);
-
-            // Step 3: Update the fileToMove object with the data from the copied file
-            const signedUrl = imageKitClient.url({
-                src: fileToMove.fileUrl,
-                signed: true,
-                expireSeconds: 300 // URL is valid for 5 minutes
-            });
-
+            // "Copy" by re-uploading from the original file's URL
             const uploadResponse = await imageKitClient.upload({
-                file: signedUrl, // Use a temporary signed URL
+                file: fileToMove.fileUrl, // Use the direct fileUrl, which should be accessible to IK
                 fileName: fileToMove.name,
-                folder: newImageKitFolderPath.replace(/\/$/, ''),
+                folder: destinationImageKitFolder.replace(/\/$/, ''),
                 useUniqueFileName: false,
             });
 
+            // Delete the original file from ImageKit
             await imageKitClient.deleteFile(fileToMove.fileIdInImageKit);
 
+            // Update the fileToMove object with the new data from the "copied" file
             fileToMove.fileIdInImageKit = uploadResponse.fileId;
             fileToMove.fileUrl = uploadResponse.url;
             fileToMove.thumbnailUrl = uploadResponse.thumbnailUrl;
             fileToMove.path = uploadResponse.filePath;
 
         } catch (error: any) {
+            console.error(`ImageKit operation failed for file ${fileToMove.id}:`, error.message);
             throw new Error(`ImageKit operation failed: ${error.message}`);
         }
-
-        // --- Database Transaction ---
-        const newDbPath = targetFolder ? `${targetFolder.path}/${fileToMove.id}` : fileToMove.id;
-
-        const [updatedItem] = await dbClient.transaction(async (tx) => {
-            const [updated] = await tx.update(files).set({
-                parentId: targetFolderId,
-                path: newDbPath,
-                updatedAt: new Date(),
-                fileIdInImageKit: fileToMove.fileIdInImageKit,
-                fileUrl: fileToMove.fileUrl,
-                thumbnailUrl: fileToMove.thumbnailUrl,
-            }).where(eq(files.id, fileIdToMove)).returning();
-
-            if (updated && updated.isFolder) {
-                await updateDescendantPaths(tx, updated.id, updated.path, userId);
-            }
-            return [updated];
-        });
-
-        return updatedItem;
     }
+
+    // 3. --- DATABASE TRANSACTION ---
+    const newDbPathForFolder = targetFolder ? `${targetFolder.path}/${fileToMove.id}` : fileToMove.id;
+
+    const [updatedItem] = await dbClient.transaction(async (tx) => {
+        const [updated] = await tx.update(files).set({
+            parentId: targetFolderId,
+            path: fileToMove.isFolder ? newDbPathForFolder : fileToMove.path,
+            updatedAt: new Date(),
+            fileIdInImageKit: fileToMove.isFolder ? fileToMove.fileIdInImageKit : fileToMove.fileIdInImageKit,
+            fileUrl: fileToMove.isFolder ? fileToMove.fileUrl : fileToMove.fileUrl,
+            thumbnailUrl: fileToMove.isFolder ? fileToMove.thumbnailUrl : fileToMove.thumbnailUrl,
+        }).where(eq(files.id, fileIdToMove)).returning();
+
+        if (updated && updated.isFolder) {
+            await updateDescendantPaths(tx, updated.id, updated.path, userId);
+        }
+
+        return [updated];
+    });
+
+    return updatedItem;
 }

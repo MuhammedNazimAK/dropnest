@@ -76,7 +76,8 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
     createFolder,
     deleteFolder,
     moveFile,
-    copyFile
+    copyFile,
+    bulkMoveFiles
   } = useFolderManagement();
 
   // --- STATE & MEMOIZATION ---
@@ -231,24 +232,18 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
     const idsToProcess = selectedIds.size > 0 ? Array.from(selectedIds) : [fileId];
 
     if (modalMode === 'move') {
-      toast.promise(
-        Promise.all(idsToProcess.map(id => moveFile(id, targetFolderId))),
-        {
-          loading: `Moving ${idsToProcess.length} item(s)...`,
-          success: 'Items moved successfully.',
-          error: 'Failed to move items.',
-        }
-      );
+      if (idsToProcess.length > 1) {
+        await bulkMoveFiles(idsToProcess, targetFolderId);
+      } else {
+        await moveFile(idsToProcess[0], targetFolderId);
+      }
     }
     else if (modalMode === 'copy') {
-      toast.promise(
-        Promise.all(idsToProcess.map(id => copyFile(id, targetFolderId))),
-        {
-          loading: `Copying ${idsToProcess.length} item(s)...`,
-          success: 'Items copied successfully.',
-          error: 'Failed to copy items.',
-        }
-      );
+      if (idsToProcess.length > 1) {
+        await bulkMoveFiles(idsToProcess, targetFolderId);
+      } else {
+        await moveFile(idsToProcess[0], targetFolderId);
+      }
     }
 
     setSelectedIds(new Set()); // Clear selection after the operation starts
@@ -439,9 +434,9 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
         item={activeItem}
         onConfirm={handleConfirmOperation}
         title={modalMode === 'move' ? 'Move' : 'Copy'}
-        confirmButtonText={modalMode === 'move' ? 'Move Here' : 'Copy Here'}  
+        confirmButtonText={modalMode === 'move' ? 'Move Here' : 'Copy Here'}
         selectedCount={selectedIds.size}
-      />  
+      />
     </div>
   );
 };
