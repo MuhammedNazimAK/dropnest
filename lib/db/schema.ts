@@ -32,7 +32,6 @@ export const files = pgTable("files", {
     .where(sql`is_trash = true`),
 }));
 
-
 export const filesRelation = relations(files, ({ one, many }) => ({
   parent: one(files, {
     fields: [files.parentId],
@@ -40,6 +39,29 @@ export const filesRelation = relations(files, ({ one, many }) => ({
   }),
   children: many(files),
 }));
+
+
+export const sharedLinks = pgTable("shared_links", {
+  id: uuid("id").defaultRandom().primaryKey(), // The unique, public-facing ID for the link
+  
+  fileId: uuid("file_id").notNull().references(() => files.id, { onDelete: 'cascade' }), // Link to the file
+  userId: text("user_id").notNull(), // The user who owns the file/link
+  
+  // More features later,
+  // password: text("password"), 
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at"),
+});
+
+// Define the relationship back to the files table
+export const sharedLinksRelations = relations(sharedLinks, ({ one }) => ({
+  file: one(files, {
+    fields: [sharedLinks.fileId],
+    references: [files.id],
+  }),
+}));
+
 
 export type File = typeof files.$inferSelect;
 export type NewFile = typeof files.$inferInsert;

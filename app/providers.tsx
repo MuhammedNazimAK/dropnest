@@ -1,8 +1,9 @@
 'use client';
 
 import { ThemeProvider as NextThemeProvider, type ThemeProviderProps } from 'next-themes';
-import {ImageKitProvider} from "imagekitio-next"
+import { ImageKitProvider } from "imagekitio-next"
 import { HeroUIProvider } from '@heroui/system';
+import { UploadProgressProvider } from '@/contexts/UploadProgressContext';
 
 
 export interface ProviderProps {
@@ -13,13 +14,13 @@ export interface ProviderProps {
 
 const authenticator = async () => {
   try {
-      
+
     const response = await fetch('/api/imagekit-auth');
     const data = await response.json();
     return data;
 
   } catch (error) {
-    
+
     console.error("Authentication error: ", error);
     throw error;
 
@@ -34,10 +35,11 @@ export function Providers({ children, themeProps }: ProviderProps) {
       <ImageKitProvider
         publicKey={process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY || ''}
         urlEndpoint={process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT || ''}
-        authenticator={authenticator}
-      >
+        authenticator={authenticator}>
         <HeroUIProvider>
-          {children}
+          <UploadProgressProvider>
+            {children}
+          </UploadProgressProvider>
         </HeroUIProvider>
       </ImageKitProvider>
     </NextThemeProvider>

@@ -1,11 +1,12 @@
 import React from "react";
 import SignUpForm from "@/components/SignUpForm";
+import { AuthLayout } from "@/components/AuthLayout";
 
 function SingUpPage() {
   return (
-    <div>
-      <SignUpForm/>
-    </div>
+      <AuthLayout>
+        <SignUpForm />
+      </AuthLayout>
   )
 }
 

@@ -39,11 +39,10 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               onClick={() => onNavigateToBreadcrumb(index)}
               disabled={index === breadcrumbs.length - 1}
-              className={`flex items-center space-x-2 p-2 rounded-lg transition-colors ${
-                index === breadcrumbs.length - 1
+              className={`flex items-center space-x-2 p-2 rounded-lg transition-colors ${index === breadcrumbs.length - 1
                   ? 'text-gray-900 dark:text-white font-semibold cursor-default'
                   : 'hover:bg-gray-100 dark:hover:bg-gray-800'
-              }`}
+                }`}
             >
               {index === 0 && <Home className="h-4 w-4" />}
               <span className="truncate max-w-28 md:max-w-48">{crumb.name}</span>
@@ -77,9 +76,17 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         <ThemeToggle isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} />
-        
+
+
+
         {/* User Profile using Clerk's managed component */}
-        <UserButton afterSignOutUrl="/" />
+        <UserButton afterSignOutUrl="/"
+          appearance={{
+            elements: {
+              avatarBox: "h-9 w-9"
+            }
+          }}
+        />
       </div>
     </header>
   );

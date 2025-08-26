@@ -2,10 +2,11 @@
 
 import React from 'react';
 import type { File as FileType } from '@/lib/db/schema';
-import { Folder, FileText, Star, MoreVertical, Trash2, Download, PenSquare, RefreshCw, Move, Copy } from 'lucide-react';
+import { Folder, FileText, Star, MoreVertical, Trash2, Download, PenSquare, RefreshCw, Move, Copy, Share } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { clsx } from 'clsx';
+import { RenameInput } from './RenameInput';
 
 // DropdownMenu components from a UI library Shadcn/UI
 import {
@@ -22,17 +23,21 @@ interface FileCardProps {
   onMove: (file: Required<FileType>) => void;
   onCopy: (file: Required<FileType>) => void;
   onDoubleClick: () => void;
-  onToggleStar: (fileId: string, isStarred: boolean) => void;
+  onToggleStar: (fileId: string[]) => void;
   onMoveToTrash: (fileId: string) => void;
-  onRename: (fileId: string, newName: string) => void;
   onDownload: (file: FileType) => void;
   onRestoreFile: (fileId: string) => void;
   onDeletePermanently: (fileId: string) => void;
   isSelected: boolean;
   onSelect: (event: React.MouseEvent) => void;
+  renamingId: string | null;
+  onStartRename: (fileId: string) => void;
+  onConfirmRename: (fileId: string, newName: string) => void;
+  onCancelRename: () => void;
+  onShare: (file: Required<FileType>) => void;
 }
 
-export const FileCard: React.FC<FileCardProps> = ({ file, isSelected, onSelect, onMove, onCopy, onDoubleClick, activeFilter, onDownload, onToggleStar, onRename, onMoveToTrash, onRestoreFile, onDeletePermanently }) => {
+export const FileCard: React.FC<FileCardProps> = ({ file, onShare, isSelected, onSelect, onMove, onCopy, onDoubleClick, activeFilter, onDownload, onToggleStar, onMoveToTrash, onRestoreFile, onDeletePermanently, onStartRename, renamingId, onConfirmRename, onCancelRename }) => {
 
   const {
     attributes,
@@ -42,6 +47,7 @@ export const FileCard: React.FC<FileCardProps> = ({ file, isSelected, onSelect, 
   } = useDraggable({
     id: file.id,
     data: { file },
+    disabled: renamingId === file.id,
   });
 
 
@@ -76,19 +82,11 @@ export const FileCard: React.FC<FileCardProps> = ({ file, isSelected, onSelect, 
     return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
   };
 
-  // Simple signature that onSelect can use.
-  const handleRename = () => {
-    // 1. Prompt the user for the new name
-    const newName = prompt("Enter new name:", file.name);
-
-    // 2. Validate the input and call the prop function if valid
-    if (newName && newName.trim() !== "" && newName !== file.name) {
-      onRename(file.id, newName.trim());
-    }
+  const handleStartRename = () => {
+    onStartRename(file.id);
   };
 
   return (
-
     <motion.div
       ref={setRefs}
       {...listeners}
@@ -100,19 +98,27 @@ export const FileCard: React.FC<FileCardProps> = ({ file, isSelected, onSelect, 
       animate="visible"
       transition={{ duration: 0.2 }}
       className={clsx(
-        "group relative rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/50",
-        "transition-all duration-200 cursor-pointer",
-        "h-60 w-full",
-        { "border-blue-500 ring-2 ring-blue-500": isSelected }, // Style for selected items
-        { "border-gray-200 dark:border-gray-800": !isSelected },
-        { "cursor-grab": !isDragging },
-        { "opacity-30": isDragging },
-        // The ring effect is a great indicator, let's keep it.
-        { "ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-gray-900": isOver && file.isFolder },
+        "group relative rounded-xl border bg-white dark:bg-gray-800/50",
+        "transition-all duration-200 cursor-pointer h-52 w-full",
+        "p-4 flex flex-col", // Make the root element the flex container
+        {
+          "border-blue-500 ring-2 ring-blue-500": isSelected,
+          "ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-gray-900": !isSelected && isOver && file.isFolder,
+          "border-gray-200 dark:border-gray-800": !isSelected && !(isOver && file.isFolder),
+          "cursor-grab": !isDragging,
+          "opacity-40": isDragging,
+        }
       )}
     >
-      <div className="p-4 flex flex-col h-full">
-        {/* Icon and Actions */}
+      {/* Star Icon (absolutely positioned) */}
+      {file.isStarred && (
+        <div className="absolute top-2 left-2 text-yellow-400">
+          <Star className="w-4 h-4 fill-current" />
+        </div>
+      )}
+
+      {/* Header Section (Icon and Actions) */}
+      <div className="flex-shrink-0">
         <div className="flex justify-between items-start mb-4">
           <div className="w-10 h-10 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-lg">
             {isFolder ? (
@@ -129,7 +135,6 @@ export const FileCard: React.FC<FileCardProps> = ({ file, isSelected, onSelect, 
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                {/* Show these actions for normal and starred views */}
                 {activeFilter !== 'trash' ? (
                   <>
                     {!file.isFolder && (
@@ -138,7 +143,7 @@ export const FileCard: React.FC<FileCardProps> = ({ file, isSelected, onSelect, 
                         <span>Download</span>
                       </DropdownMenuItem>
                     )}
-                    <DropdownMenuItem onSelect={() => onToggleStar(file.id, file.isStarred)}>
+                    <DropdownMenuItem onSelect={() => onToggleStar([file.id])}>
                       <Star className={`mr-2 h-4 w-4 ${file.isStarred ? 'text-yellow-400 fill-yellow-400' : ''}`} />
                       <span>{file.isStarred ? 'Unstar' : 'Star'}</span>
                     </DropdownMenuItem>
@@ -146,11 +151,19 @@ export const FileCard: React.FC<FileCardProps> = ({ file, isSelected, onSelect, 
                       <Move className="w-4 h-4 mr-2" />
                       <span>Move</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onCopy(file)}>
-                      <Copy className="w-4 h-4 mr-2" /> {/* You'll need to import the Copy icon from lucide-react */}
-                      <span>Make a copy</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={handleRename}>
+                    {!file.isFolder && (
+                      <DropdownMenuItem onClick={() => onCopy(file)}>
+                        <Copy className="mr-2 h-4 w-4" />
+                        <span>Make a copy</span>
+                      </DropdownMenuItem>
+                    )}
+                    {!file.isFolder && (
+                      <DropdownMenuItem onSelect={() => onShare(file)}>
+                        <Share className="mr-2 h-4 w-4" />
+                        <span>Share</span>
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem onSelect={handleStartRename}>
                       <PenSquare className="mr-2 h-4 w-4" />
                       <span>Rename</span>
                     </DropdownMenuItem>
@@ -161,7 +174,6 @@ export const FileCard: React.FC<FileCardProps> = ({ file, isSelected, onSelect, 
                     </DropdownMenuItem>
                   </>
                 ) : (
-                  /* Show these actions only for the trash view */
                   <>
                     <DropdownMenuItem onSelect={() => onRestoreFile(file.id)}>
                       <RefreshCw className="mr-2 h-4 w-4" />
@@ -177,33 +189,37 @@ export const FileCard: React.FC<FileCardProps> = ({ file, isSelected, onSelect, 
             </DropdownMenu>
           </div>
         </div>
+      </div>
 
-        {/* Thumbnail for image files */}
+      {/* Middle Section (Thumbnail or Spacer) - This will grow to fill space */}
+      <div className="flex-grow w-full flex items-center justify-center mb-2 min-h-0">
         {!isFolder && file.thumbnailUrl && (
-          <div className="flex-grow mb-4 flex items-center justify-center">
-            <img
-              src={file.thumbnailUrl}
-              alt={file.name}
-              className="max-h-24 object-contain rounded-md"
-            />
-          </div>
+          <img
+            src={file.thumbnailUrl}
+            alt={file.name}
+            className="max-h-full max-w-full object-contain"
+          />
         )}
+      </div>
 
-        {/* Spacer for non-image files to maintain height */}
-        {(!isFolder || (!isFolder && !file.thumbnailUrl)) && <div className="flex-grow"></div>}
-
-
-        {/* File Name and Size */}
-        <div className="mt-auto">
+      {/* Footer Section (Name, Size) - This will always be at the bottom */}
+      <div className="flex-shrink-0">
+        {renamingId === file.id ? (
+          <RenameInput
+            currentName={file.name}
+            onConfirmRename={(newName) => onConfirmRename(file.id, newName)}
+            onCancelRename={onCancelRename}
+          />
+        ) : (
           <p className="font-semibold text-sm text-gray-800 dark:text-gray-200 truncate" title={file.name}>
             {file.name}
           </p>
-          {!isFolder && (
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              {formatFileSize(file.size)}
-            </p>
-          )}
-        </div>
+        )}
+        {!isFolder && (
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            {formatFileSize(file.size)}
+          </p>
+        )}
       </div>
     </motion.div>
   );

@@ -24,7 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Providers>
               <ThemeWrapper> {/* theme changes inside here */}
                 {children}
-                <Toaster position="bottom-right" richColors/>
+                <Toaster position="top-right" richColors/>
               </ThemeWrapper>
             </Providers>
           </body>

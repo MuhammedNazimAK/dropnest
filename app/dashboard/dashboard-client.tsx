@@ -1,10 +1,9 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import type { File } from '@/lib/db/schema';
+import type { File as DbFile } from '@/lib/db/schema';
 
-import { useFileManagement } from '@/hooks/useFileManagement';
-import { useFolderManagement } from '@/hooks/useFolderManagement';
+import { useFileManager } from '@/hooks/useFileManager';
 
 import { Sidebar } from '@/components/dashboard/layout/Sidebar';
 import { Header } from '@/components/dashboard/layout/Header';
@@ -15,6 +14,9 @@ import { FileOperationModal } from '@/components/dashboard/modals/FileOperationM
 import { FileCard } from '@/components/dashboard/ui/FileCard';
 import { FileListRow } from '@/components/dashboard/ui/FileListRow';
 import { BulkActionsToolbar } from '@/components/ui/BulkActionsToolbar';
+import { UploadProgressTracker } from '@/components/dashboard/upload/UploadProgressTracker';
+import { FilePreviewModal } from '@/components/dashboard/modals/FilePreviewModal';
+import { ShareModal } from '@/components/dashboard/modals/ShareModal';
 
 import {
   DndContext,
@@ -29,7 +31,7 @@ import {
 import { toast } from 'sonner';
 
 interface DashboardClientProps {
-  initialFiles: File[];
+  initialFiles: DbFile[];
   userId: string;
 }
 
@@ -40,45 +42,43 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<DbFile[] | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
   const [activeFilter, setActiveFilter] = useState<'all' | 'starred' | 'trash'>('all');
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [activeDragItem, setActiveDragItem] = useState<Active | null>(null);
   const [modalMode, setModalMode] = useState<'move' | 'copy' | null>(null);
-  const [activeItem, setActiveItem] = useState<Required<File> | null>(null);
+  const [activeItem, setActiveItem] = useState<Required<DbFile> | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [lastselectedId, setLastSelectedId] = useState<string | null>(null);
-
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [fileToPreview, setFileToPreview] = useState<Required<DbFile> | null>(null);
+  const [fileToShare, setFileToShare] = useState<Required<DbFile> | null>(null);
 
   // --- DATA HOOKS ---
 
   // File Management Hook
   const {
     files,
+    setFiles,
     isUploading,
     uploadProgress,
-    setFiles,
     handleFileUpload,
     toggleStar,
     moveToTrash,
     restoreFile,
-    emptyTrash,
     deleteFilePermanently,
     renameItem,
-    refreshFiles
-  } = useFileManagement(initialFiles, userId);
-
-  // Folder Management Hook
-  const {
+    refreshFiles,
     currentFolderId,
     breadcrumbs,
     navigateToFolder,
     navigateToBreadcrumb,
     createFolder,
-    deleteFolder,
+    bulkMoveFiles,
+    bulkCopyFiles,
     moveFile,
-    copyFile,
-    bulkMoveFiles
-  } = useFolderManagement();
+  } = useFileManager(initialFiles, userId);
 
   // --- STATE & MEMOIZATION ---
 
@@ -98,6 +98,11 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
       .filter(file => file.name.toLowerCase().includes(searchQuery.toLowerCase()));
   }, [files, currentFolderId, activeFilter, searchQuery]);
 
+  const selectionContainsFolder = useMemo(() => {
+    if (selectedIds.size === 0) return false;
+    // Find any file in the main `files` list that is selected AND is a folder.
+    return files.some(file => file.id && selectedIds.has(file.id) && file.isFolder);
+  }, [files, selectedIds]);
 
   const handleSelection = (fileId: string, event: React.MouseEvent) => {
     event.stopPropagation();
@@ -184,6 +189,8 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
     await refreshFiles(currentFolderId);
   };
 
+
+  // --- EVENT HANDLERS ---
   const handleBulkMove = () => {
     if (selectedIds.size === 0) return;
 
@@ -197,13 +204,43 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
     setModalMode('copy');
   };
 
-  // --- EVENT HANDLERS ---
+  const handleBulkToggleStar = () => {
+    if (selectedIds.size === 0) return;
+    toggleStar(Array.from(selectedIds));
+    setSelectedIds(new Set());
+  };
 
   // Handler for opening a folder
-  const handleFolderOpen = (folder: File) => {
-    if (folder.isFolder) {
-      navigateToFolder(folder.id, folder.name);
+  const handleDoubleClick = (item: Required<DbFile>) => {
+    // ALWAYS clear selection on a double-click action
+    setSelectedIds(new Set());
+    setLastSelectedId(null);
+
+    if (item.isFolder) {
+      // If it's a folder, navigate
+      navigateToFolder(item.id, item.name);
+      if (searchQuery.length > 0) {
+        setSearchQuery('');
+        setSearchResults(null);
+      }
+    } else {
+      // --- FIX: If it's a file, open the preview modal ---
+      setFileToPreview(item);
     }
+  };
+
+  // Handlers for starting and finishing the rename process
+  const handleStartRename = (fileId: string) => {
+    setRenamingId(fileId);
+  };
+
+  const handleConfirmRename = async (fileId: string, newName: string) => {
+    await renameItem(fileId, newName);
+    setRenamingId(null);
+  };
+
+  const handleCancelRename = () => {
+    setRenamingId(null);
   };
 
   // Handler for refreshing files after a folder operation
@@ -218,7 +255,7 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
     setIsUploadModalOpen(false);
   }
 
-  const handleOpenModal = (item: Required<File>, mode: 'move' | 'copy') => {
+  const handleOpenModal = (item: Required<DbFile>, mode: 'move' | 'copy') => {
     setActiveItem(item);
     setModalMode(mode);
   };
@@ -226,6 +263,16 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
   const handleCloseModal = () => {
     setModalMode(null);
     setActiveItem(null);
+  };
+
+  const handleItemClick = (file: Required<DbFile>, event: React.MouseEvent) => {
+    if (file.isFolder) {
+      // If it's a folder, just handle selection
+      handleSelection(file.id, event);
+    } else {
+      // If it's a file, a single click should open the preview
+      setFileToPreview(file);
+    }
   };
 
   const handleConfirmOperation = async (fileId: string, targetFolderId: string | null) => {
@@ -239,16 +286,20 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
       }
     }
     else if (modalMode === 'copy') {
-      if (idsToProcess.length > 1) {
-        await bulkMoveFiles(idsToProcess, targetFolderId);
-      } else {
-        await moveFile(idsToProcess[0], targetFolderId);
+
+      const newFiles = await bulkCopyFiles(idsToProcess, targetFolderId);
+
+      if (newFiles && newFiles.length > 0) {
+        const filesForCurrentFolder = newFiles.filter(f => f.parentId === currentFolderId);
+        if (filesForCurrentFolder.length > 0) {
+          setFiles(prev => [...prev, ...filesForCurrentFolder]);
+        }
       }
     }
 
     setSelectedIds(new Set()); // Clear selection after the operation starts
-    await refreshFiles(currentFolderId);
     handleCloseModal();
+    await refreshFiles(currentFolderId);
   };
 
   const sensors = useSensors(
@@ -292,6 +343,36 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
     }
   };
 
+  // Effect to trigger the search API call
+  useEffect(() => {
+    // Use a timeout to "debounce" the input. Don't fire an API call on every single keystroke.
+    const searchTimeout = setTimeout(async () => {
+      if (searchQuery.length > 1) { // Only search if query is > 1 character
+        setIsSearching(true);
+        try {
+          const response = await fetch(`/api/files/search?q=${searchQuery}`);
+          const data = await response.json();
+          if (response.ok) {
+            setSearchResults(data);
+          }
+        } catch (error) {
+          console.error("Failed to fetch search results:", error);
+          setSearchResults([]); // Show empty on error
+        } finally {
+          setIsSearching(false);
+        }
+      } else {
+        setSearchResults(null); // Clear results if search query is empty
+      }
+    }, 300); // Wait 300ms after the user stops typing
+
+    return () => clearTimeout(searchTimeout); // Cleanup on unmount or if query changes
+  }, [searchQuery]);
+
+  // --- Logic to decide which files to display ---
+  const filesToDisplay = searchQuery.length > 1 ? searchResults : filteredFiles;
+  const isSearchActive = searchQuery.length > 1 && searchResults !== null;
+
   // Effect to apply dark mode class to the body
   useEffect(() => {
     const body = window.document.body;
@@ -329,7 +410,7 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
       <div className="flex flex-col flex-1 w-full overflow-hidden">
         {/* ===== TOP HEADER ===== */}
         <Header
-          breadcrumbs={breadcrumbs}
+          breadcrumbs={isSearchActive ? [{ id: null, name: `Search results for "${searchQuery}"` }] : breadcrumbs}
           onNavigateToBreadcrumb={navigateToBreadcrumb}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
@@ -353,25 +434,42 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
               onCopy={handleBulkCopy}
               onRestore={handleBulkRestore}
               onClearSelection={() => setSelectedIds(new Set())}
+              disableCopy={selectionContainsFolder}
+              onToggleStar={handleBulkToggleStar}
             />
-            <FileView
-              selectedIds={selectedIds}
-              files={filteredFiles as Required<File>[]}
-              viewMode={viewMode}
-              activeFilter={activeFilter}
-              onToggleStar={toggleStar}
-              onMoveToTrash={moveToTrash}
-              onFolderOpen={handleFolderOpen}
-              onRestoreFile={restoreFile}
-              onDeletePermanently={deleteFilePermanently}
-              onRename={renameItem}
-              onMove={(file) => handleOpenModal(file, 'move')}
-              onCopy={(file) => handleOpenModal(file, 'copy')}
-              onDownload={(file) => window.open(file.fileUrl, '_blank')} // Simple download handler
-              onUploadClick={() => setIsUploadModalOpen(true)}
-              onFileSelect={handleSelection}
-            />
+            {isSearching ? (
+              <p>Loading search results...</p> // Replace with a proper loading spinner or skelton loading
+            ) : (
+              <FileView
+                selectedIds={selectedIds}
+                files={filteredFiles as Required<DbFile>[]}
+                viewMode={viewMode}
+                activeFilter={activeFilter}
+                onToggleStar={toggleStar}
+                onMoveToTrash={moveToTrash}
+                onFolderOpen={handleDoubleClick}
+                onRestoreFile={restoreFile}
+                onDeletePermanently={deleteFilePermanently}
+                onRename={renameItem}
+                onMove={(file) => handleOpenModal(file, 'move')}
+                onCopy={(file) => handleOpenModal(file, 'copy')}
+                onDownload={(file) => window.open(file.fileUrl, '_blank')} // Simple download handler
+                onUploadClick={() => setIsUploadModalOpen(true)}
+                onFileSelect={handleSelection}
+                renamingId={renamingId}
+                onStartRename={handleStartRename}
+                onConfirmRename={handleConfirmRename}
+                onCancelRename={handleCancelRename}
+                onDoubleClick={handleDoubleClick}
+                onShare={(file) => setFileToShare(file)}
+              />
+            )}
           </MainContent>
+
+          <ShareModal
+            file={fileToShare}
+            onClose={() => setFileToShare(null)}
+          />
 
           {/* --- ADD THE DRAG OVERLAY --- */}
           <DragOverlay>
@@ -387,12 +485,16 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
                   activeFilter={'all'}
                   onDownload={() => { }}
                   onToggleStar={() => { }}
-                  onRename={() => { }}
                   onMoveToTrash={() => { }}
                   onRestoreFile={() => { }}
                   onDeletePermanently={() => { }}
                   isSelected={false}
                   onSelect={() => { }}
+                  renamingId={null}
+                  onStartRename={() => { }}
+                  onConfirmRename={() => { }}
+                  onCancelRename={() => { }}
+                  onShare={() => { }}
                 />
               ) : (
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg">
@@ -404,12 +506,16 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
                     activeFilter={'all'}
                     onDownload={() => { }}
                     onToggleStar={() => { }}
-                    onRename={() => { }}
                     onMoveToTrash={() => { }}
                     onRestoreFile={() => { }}
                     onDeletePermanently={() => { }}
                     isSelected={false}
                     onSelect={() => { }}
+                    renamingId={null}
+                    onStartRename={() => { }}
+                    onConfirmRename={() => { }}
+                    onCancelRename={() => { }}
+                    onShare={() => { }}
                   />
                 </div>
               )
@@ -437,6 +543,11 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
         confirmButtonText={modalMode === 'move' ? 'Move Here' : 'Copy Here'}
         selectedCount={selectedIds.size}
       />
+      <FilePreviewModal
+        file={fileToPreview}
+        onClose={() => setFileToPreview(null)}
+      />
+      <UploadProgressTracker />
     </div>
   );
 };

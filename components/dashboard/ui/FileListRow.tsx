@@ -2,11 +2,12 @@
 
 import React from 'react';
 import type { File as FileType } from '@/lib/db/schema';
-import { Folder, FileText, Star, MoreVertical, Trash2, Download, PenSquare, RefreshCw, Move, Copy } from 'lucide-react';
+import { Folder, FileText, Star, MoreVertical, Trash2, Download, PenSquare, RefreshCw, Move, Copy, Share } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { clsx } from 'clsx';
+import { RenameInput } from './RenameInput';
 
 
 // Assume DropdownMenu is available
@@ -21,20 +22,24 @@ import {
 interface FileListRowProps {
     file: Required<FileType>;
     activeFilter: 'all' | 'starred' | 'trash';
+    isSelected: boolean;
+    renamingId: string | null;
+    onSelect: (event: React.MouseEvent) => void;
     onMove: (file: Required<FileType>) => void;
     onCopy: (file: Required<FileType>) => void;
     onDoubleClick: () => void;
-    onToggleStar: (fileId: string, isStarred: boolean) => void;
+    onToggleStar: (fileIds: string[]) => void;
     onMoveToTrash: (fileId: string) => void;
-    onRename: (FileId: string, newName: string) => void;
-    onDownload: (fileId: FileType) => void;
+    onStartRename: (fileId: string) => void;
+    onConfirmRename: (fileId: string, newName: string) => void;
+    onCancelRename: () => void;
+    onDownload: (file: FileType) => void;
     onRestoreFile: (fileId: string) => void;
     onDeletePermanently: (fileId: string) => void;
-    isSelected: boolean;
-    onSelect: (event: React.MouseEvent) => void;
+    onShare: (file: Required<FileType>) => void;
 }
 
-export const FileListRow: React.FC<FileListRowProps> = ({ file, isSelected, onSelect, onMove, onCopy, onDoubleClick, activeFilter, onToggleStar, onMoveToTrash, onRename, onDownload, onRestoreFile, onDeletePermanently }) => {
+export const FileListRow: React.FC<FileListRowProps> = ({ renamingId, onShare, onStartRename, onConfirmRename, onCancelRename, file, isSelected, onSelect, onMove, onCopy, onDoubleClick, activeFilter, onToggleStar, onMoveToTrash, onDownload, onRestoreFile, onDeletePermanently }) => {
 
     const {
         attributes,
@@ -74,15 +79,8 @@ export const FileListRow: React.FC<FileListRowProps> = ({ file, isSelected, onSe
         return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
     };
 
-    // Simple signature that onSelect can use.
-    const handleRename = () => {
-        // 1. Prompt the user for the new name
-        const newName = prompt("Enter new name:", file.name);
-
-        // 2. Validate the input and call the prop function if valid
-        if (newName && newName.trim() !== "" && newName !== file.name) {
-            onRename(file.id, newName.trim());
-        }
+    const handleStartRename = () => {
+        onStartRename(file.id);
     };
 
     return (
@@ -111,9 +109,17 @@ export const FileListRow: React.FC<FileListRowProps> = ({ file, isSelected, onSe
             {/* Name & Icon */}
             <div className="col-span-6 flex items-center space-x-4">
                 {isFolder ? <Folder className="w-5 h-5 text-blue-500 flex-shrink-0" /> : <FileText className="w-5 h-5 text-gray-500 flex-shrink-0" />}
-                <span className="font-medium text-sm text-gray-800 dark:text-gray-200 truncate" title={file.name}>
-                    {file.name}
-                </span>
+                {renamingId === file.id ? (
+                    <RenameInput
+                        currentName={file.name}
+                        onConfirmRename={(newName) => onConfirmRename(file.id, newName)}
+                        onCancelRename={onCancelRename}
+                    />
+                ) : (
+                    <span className="font-medium text-sm text-gray-800 dark:text-gray-200 truncate" title={file.name}>
+                        {file.name}
+                    </span>
+                )}
                 {file.isStarred && <Star className="h-4 w-4 text-yellow-400 flex-shrink-0" />}
             </div>
 
@@ -145,7 +151,7 @@ export const FileListRow: React.FC<FileListRowProps> = ({ file, isSelected, onSe
                                         <span>Download</span>
                                     </DropdownMenuItem>
                                 )}
-                                <DropdownMenuItem onSelect={() => onToggleStar(file.id, file.isStarred)}>
+                                <DropdownMenuItem onSelect={() => onToggleStar([file.id])}>
                                     <Star className={`mr-2 h-4 w-4 ${file.isStarred ? 'text-yellow-400 fill-yellow-400' : ''}`} />
                                     <span>{file.isStarred ? 'Unstar' : 'Star'}</span>
                                 </DropdownMenuItem>
@@ -153,11 +159,19 @@ export const FileListRow: React.FC<FileListRowProps> = ({ file, isSelected, onSe
                                     <Move className="w-4 h-4 mr-2" />
                                     <span>Move</span>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => onCopy(file)}>
-                                    <Copy className="w-4 h-4 mr-2" /> {/* You'll need to import the Copy icon from lucide-react */}
-                                    <span>Make a copy</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onSelect={() => onRename(file.id, file.name)}>
+                                {!file.isFolder && (
+                                    <DropdownMenuItem onClick={() => onCopy(file)}>
+                                        <Copy className="w-4 h-4 mr-2" />
+                                        <span>Make a copy</span>
+                                    </DropdownMenuItem>
+                                )}
+                                {!file.isFolder && (
+                                    <DropdownMenuItem onSelect={() => onShare(file)}>
+                                        <Share className="mr-2 h-4 w-4" />
+                                        <span>Share</span>
+                                    </DropdownMenuItem>
+                                )}
+                                <DropdownMenuItem onSelect={handleStartRename}>
                                     <PenSquare className="mr-2 h-4 w-4" />
                                     <span>Rename</span>
                                 </DropdownMenuItem>
