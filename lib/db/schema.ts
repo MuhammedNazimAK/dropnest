@@ -24,6 +24,8 @@ export const files = pgTable("files", {
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+
+  lastAccessedAt: timestamp("last_accessed_at"), // Can be null for never accessed files
 },(table) => ({
   userParentIdx: index("files_user_parent_idx").on(table.userId, table.parentId, table.createdAt),
   

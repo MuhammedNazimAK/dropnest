@@ -17,6 +17,8 @@ import { BulkActionsToolbar } from '@/components/ui/BulkActionsToolbar';
 import { UploadProgressTracker } from '@/components/dashboard/upload/UploadProgressTracker';
 import { FilePreviewModal } from '@/components/dashboard/modals/FilePreviewModal';
 import { ShareModal } from '@/components/dashboard/modals/ShareModal';
+import { RecentFiles } from '@/components/dashboard/RecentFiles';
+import { FileViewLoader } from '@/components/dashboard/views/FileViewLoader';
 
 import {
   DndContext,
@@ -265,6 +267,11 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
     setActiveItem(null);
   };
 
+  useEffect(() => {
+    // When the component mounts, set the initial files
+    setFiles(initialFiles);
+  }, [initialFiles, setFiles]);
+
   const handleItemClick = (file: Required<DbFile>, event: React.MouseEvent) => {
     if (file.isFolder) {
       // If it's a folder, just handle selection
@@ -392,6 +399,8 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
     refreshFiles(currentFolderId);
   }, [currentFolderId, refreshFiles]);
 
+  const isMainContentLoading = isSearching || files === null;
+
   // --- RENDER ---
 
   return (
@@ -420,26 +429,29 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
           setIsDarkMode={setIsDarkMode}
         />
 
-        <DndContext
-          sensors={sensors}
-          onDragStart={(event) => setActiveDragItem(event.active)}
-          onDragEnd={handleDragEnd}>
-          {/* ===== MAIN CONTENT AREA ===== */}
-          <MainContent>
-            <BulkActionsToolbar
-              selectedCount={selectedIds.size}
-              activeFilter={activeFilter}
-              onDelete={handleBulkDelete}
-              onMove={handleBulkMove}
-              onCopy={handleBulkCopy}
-              onRestore={handleBulkRestore}
-              onClearSelection={() => setSelectedIds(new Set())}
-              disableCopy={selectionContainsFolder}
-              onToggleStar={handleBulkToggleStar}
-            />
-            {isSearching ? (
-              <p>Loading search results...</p> // Replace with a proper loading spinner or skelton loading
-            ) : (
+        <main className="flex-1 overflow-y-auto p-6">
+          <RecentFiles onFilePreview={setFileToPreview} />
+
+          {isMainContentLoading ? (
+            // --- MAIN LOADING STATE ---
+            <FileViewLoader />
+          ) : (
+            <DndContext
+              sensors={sensors}
+              onDragStart={(event) => setActiveDragItem(event.active)}
+              onDragEnd={handleDragEnd}>
+              {/* ===== MAIN CONTENT AREA ===== */}
+              <BulkActionsToolbar
+                selectedCount={selectedIds.size}
+                activeFilter={activeFilter}
+                onDelete={handleBulkDelete}
+                onMove={handleBulkMove}
+                onCopy={handleBulkCopy}
+                onRestore={handleBulkRestore}
+                onClearSelection={() => setSelectedIds(new Set())}
+                disableCopy={selectionContainsFolder}
+                onToggleStar={handleBulkToggleStar}
+              />
               <FileView
                 selectedIds={selectedIds}
                 files={filteredFiles as Required<DbFile>[]}
@@ -463,65 +475,59 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
                 onDoubleClick={handleDoubleClick}
                 onShare={(file) => setFileToShare(file)}
               />
-            )}
-          </MainContent>
-
-          <ShareModal
-            file={fileToShare}
-            onClose={() => setFileToShare(null)}
-          />
-
-          {/* --- ADD THE DRAG OVERLAY --- */}
-          <DragOverlay>
-            {activeDragItem ? (
-              // When an item is being dragged, render a FileCard here
-              viewMode === 'grid' ? (
-                <FileCard
-                  file={activeDragItem.data.current?.file}
-                  // dummy functions for props that aren't used in the overlay's appearance
-                  onMove={() => { }}
-                  onCopy={() => { }}
-                  onDoubleClick={() => { }}
-                  activeFilter={'all'}
-                  onDownload={() => { }}
-                  onToggleStar={() => { }}
-                  onMoveToTrash={() => { }}
-                  onRestoreFile={() => { }}
-                  onDeletePermanently={() => { }}
-                  isSelected={false}
-                  onSelect={() => { }}
-                  renamingId={null}
-                  onStartRename={() => { }}
-                  onConfirmRename={() => { }}
-                  onCancelRename={() => { }}
-                  onShare={() => { }}
-                />
-              ) : (
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg">
-                  <FileListRow
-                    file={activeDragItem.data.current?.file}
-                    onMove={() => { }}
-                    onCopy={() => { }}
-                    onDoubleClick={() => { }}
-                    activeFilter={'all'}
-                    onDownload={() => { }}
-                    onToggleStar={() => { }}
-                    onMoveToTrash={() => { }}
-                    onRestoreFile={() => { }}
-                    onDeletePermanently={() => { }}
-                    isSelected={false}
-                    onSelect={() => { }}
-                    renamingId={null}
-                    onStartRename={() => { }}
-                    onConfirmRename={() => { }}
-                    onCancelRename={() => { }}
-                    onShare={() => { }}
-                  />
-                </div>
-              )
-            ) : null}
-          </DragOverlay>
-        </DndContext>
+              {/* --- ADD THE DRAG OVERLAY --- */}
+              <DragOverlay>
+                {activeDragItem ? (
+                  // When an item is being dragged, render a FileCard here
+                  viewMode === 'grid' ? (
+                    <FileCard
+                      file={activeDragItem.data.current?.file}
+                      // dummy functions for props that aren't used in the overlay's appearance
+                      onMove={() => { }}
+                      onCopy={() => { }}
+                      onDoubleClick={() => { }}
+                      activeFilter={'all'}
+                      onDownload={() => { }}
+                      onToggleStar={() => { }}
+                      onMoveToTrash={() => { }}
+                      onRestoreFile={() => { }}
+                      onDeletePermanently={() => { }}
+                      isSelected={false}
+                      onSelect={() => { }}
+                      renamingId={null}
+                      onStartRename={() => { }}
+                      onConfirmRename={() => { }}
+                      onCancelRename={() => { }}
+                      onShare={() => { }}
+                    />
+                  ) : (
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg">
+                      <FileListRow
+                        file={activeDragItem.data.current?.file}
+                        onMove={() => { }}
+                        onCopy={() => { }}
+                        onDoubleClick={() => { }}
+                        activeFilter={'all'}
+                        onDownload={() => { }}
+                        onToggleStar={() => { }}
+                        onMoveToTrash={() => { }}
+                        onRestoreFile={() => { }}
+                        onDeletePermanently={() => { }}
+                        isSelected={false}
+                        onSelect={() => { }}
+                        renamingId={null}
+                        onStartRename={() => { }}
+                        onConfirmRename={() => { }}
+                        onCancelRename={() => { }}
+                        onShare={() => { }}
+                      />
+                    </div>
+                  )
+                ) : null}
+              </DragOverlay>
+            </DndContext>
+          )}
+        </main>
       </div>
 
       {/* ===== MODALS ===== */}
@@ -548,6 +554,10 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
         onClose={() => setFileToPreview(null)}
       />
       <UploadProgressTracker />
+      <ShareModal
+        file={fileToShare}
+        onClose={() => setFileToShare(null)}
+      />
     </div>
   );
 };

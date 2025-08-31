@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react'; // <-- Import useState and useEffect
 import type { File as DbFile } from '@/lib/db/schema';
 import { X, Download, File as FileIcon, AlertTriangle } from 'lucide-react';
 import Lightbox from "yet-another-react-lightbox";
@@ -11,67 +11,91 @@ interface FilePreviewModalProps {
   onClose: () => void;
 }
 
-// Helper function to categorize file types
-const getFileType = (mimeType: string): 'image' | 'pdf' | 'video' | 'audio' | 'other' => {
+const getFileType = (mimeType: string): 'image' | 'pdf' | 'video' | 'audio' | 'text' | 'other' => {
   if (mimeType.startsWith('image/')) return 'image';
   if (mimeType === 'application/pdf') return 'pdf';
   if (mimeType.startsWith('video/')) return 'video';
   if (mimeType.startsWith('audio/')) return 'audio';
+  if (mimeType === 'text/plain') return 'text';
   return 'other';
 };
 
+const TextPreview = ({ fileUrl }: { fileUrl: string }) => {
+  const [content, setContent] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(fileUrl)
+      .then(res => res.text())
+      .then(text => {
+        setContent(text);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Failed to fetch text content", err);
+        setContent("Could not load file preview.");
+        setLoading(false);
+      });
+  }, [fileUrl]);
+
+  if (loading) {
+    return <div className="p-4 text-gray-400">Loading preview...</div>;
+  }
+
+  // <pre> tag to preserve whitespace and line breaks from the text file
+  return (
+    <pre className="text-left p-4 bg-gray-900 text-white whitespace-pre-wrap break-words w-full h-full overflow-auto">
+      {content}
+    </pre>
+  );
+};
+
 export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ file, onClose }) => {
+
+  useEffect(() => {
+    // When the modal opens with a file, ping endpoint to update the timestamp.
+    if (file) {
+      fetch(`/api/files/${file.id}/access`, {
+        method: 'PUT',
+      }).catch(console.error); // Log errors but don't block the UI
+    }
+  }, [file]); // This effect runs whenever the `file` prop changes.
+
   if (!file) {
     return null;
   }
 
   const fileType = getFileType(file.type);
 
-  // For images, we use the lightbox which is a full-screen experience.
-  // We don't render our custom modal chrome around it.
   if (fileType === 'image') {
     return (
       <Lightbox
-        open={true} // The modal's existence is controlled by the `file` prop
+        open={true}
         close={onClose}
         slides={[{ src: file.fileUrl, alt: file.name }]}
-        // Add plugins for more features if you want (e.g., zoom, thumbnails)
       />
     );
   }
 
-  // For all other file types, we render our custom modal with a header.
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
-      onClick={onClose} // Close modal on backdrop click
+      onClick={onClose}
     >
-      <div 
+      <div
         className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col"
-        onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside the modal
+        onClick={(e) => e.stopPropagation()}
       >
-        {/* --- MODAL HEADER --- */}
         <header className="flex-shrink-0 p-3 border-b dark:border-gray-700 flex justify-between items-center">
           <div className="flex items-center space-x-2 min-w-0">
             <FileIcon className="w-5 h-5 text-gray-500 flex-shrink-0" />
             <p className="font-semibold truncate" title={file.name}>{file.name}</p>
           </div>
           <div className="flex items-center space-x-2">
-            <a
-              href={file.fileUrl}
-              download={file.name}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
-              title="Download"
-            >
+            <a href={file.fileUrl} download={file.name} target="_blank" rel="noopener noreferrer" className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700" title="Download">
               <Download className="w-5 h-5" />
             </a>
-            <button 
-              onClick={onClose} 
-              className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
-              title="Close"
-            >
+            <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700" title="Close">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -88,6 +112,11 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ file, onClos
           {fileType === 'audio' && (
             <audio src={file.fileUrl} controls />
           )}
+
+          {fileType === 'text' && (
+            <TextPreview fileUrl={file.fileUrl} />
+          )}
+
           {fileType === 'other' && (
             <div className="text-center p-8">
               <AlertTriangle className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
@@ -95,13 +124,7 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ file, onClos
               <p className="text-gray-500 mt-2">
                 A preview is not available for this file type.
               </p>
-              <a
-                href={file.fileUrl}
-                download={file.name}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-6 inline-block bg-blue-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-blue-700"
-              >
+              <a href={file.fileUrl} download={file.name} target="_blank" rel="noopener noreferrer" className="mt-6 inline-block bg-blue-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-blue-700">
                 Download "{file.name}"
               </a>
             </div>
