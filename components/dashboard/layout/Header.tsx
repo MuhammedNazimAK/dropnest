@@ -6,6 +6,7 @@ import { ChevronRight, Home, Grid, List } from 'lucide-react';
 import ThemeToggle from '@/components/ui/ThemeToggle';
 import SearchInput from '@/components/ui/SearchInput';
 import { UserButton } from "@clerk/nextjs";
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface HeaderProps {
   breadcrumbs: { id: string | null; name: string }[];
@@ -28,7 +29,7 @@ export const Header: React.FC<HeaderProps> = ({
   isDarkMode,
   setIsDarkMode
 }) => {
-  const { user } = useUser();
+  const { user, isLoaded } = useUser();
 
   return (
     <header className="flex-shrink-0 h-20 px-6 md:px-8 flex items-center justify-between border-b border-gray-200 dark:border-gray-800 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm sticky top-0 z-10">
@@ -40,8 +41,8 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={() => onNavigateToBreadcrumb(index)}
               disabled={index === breadcrumbs.length - 1}
               className={`flex items-center space-x-2 p-2 rounded-lg transition-colors ${index === breadcrumbs.length - 1
-                  ? 'text-gray-900 dark:text-white font-semibold cursor-default'
-                  : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                ? 'text-gray-900 dark:text-white font-semibold cursor-default'
+                : 'hover:bg-gray-100 dark:hover:bg-gray-800'
                 }`}
             >
               {index === 0 && <Home className="h-4 w-4" />}
@@ -80,13 +81,22 @@ export const Header: React.FC<HeaderProps> = ({
 
 
         {/* User Profile using Clerk's managed component */}
-        <UserButton afterSignOutUrl="/"
-          appearance={{
-            elements: {
-              avatarBox: "h-9 w-9"
-            }
-          }}
-        />
+        <div className="h-9 w-9 flex items-center justify-center">
+          {isLoaded ? (
+            <UserButton
+              afterSignOutUrl="/"
+              appearance={{
+                elements: {
+                  // Make the avatar fill the wrapper perfectly
+                  avatarBox: "h-full w-full"
+                }
+              }}
+            />
+          ) : (
+            // 2. The skeleton fills the wrapper and uses a full border-radius
+            <Skeleton className="h-full w-full rounded-full" />
+          )}
+        </div>
       </div>
     </header>
   );

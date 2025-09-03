@@ -17,6 +17,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+const Spinner = () => (
+  <svg className="animate-spin h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+  </svg>
+);
+
 interface FileCardProps {
   file: Required<FileType>;
   activeFilter: 'all' | 'starred' | 'trash';
@@ -35,9 +42,11 @@ interface FileCardProps {
   onConfirmRename: (fileId: string, newName: string) => void;
   onCancelRename: () => void;
   onShare: (file: Required<FileType>) => void;
+  isReadOnly?: boolean;
+  status?: 'loading';
 }
 
-export const FileCard: React.FC<FileCardProps> = ({ file, onShare, isSelected, onSelect, onMove, onCopy, onDoubleClick, activeFilter, onDownload, onToggleStar, onMoveToTrash, onRestoreFile, onDeletePermanently, onStartRename, renamingId, onConfirmRename, onCancelRename }) => {
+export const FileCard: React.FC<FileCardProps> = ({ file, status, isReadOnly, onShare, isSelected, onSelect, onMove, onCopy, onDoubleClick, activeFilter, onDownload, onToggleStar, onMoveToTrash, onRestoreFile, onDeletePermanently, onStartRename, renamingId, onConfirmRename, onCancelRename }) => {
 
   const {
     attributes,
@@ -110,6 +119,14 @@ export const FileCard: React.FC<FileCardProps> = ({ file, onShare, isSelected, o
         }
       )}
     >
+
+      {/* It's the first child of the relative parent, ensuring it covers everything below it. */}
+      {status === 'loading' && (
+        <div className="absolute inset-0 z-10 bg-white/70 dark:bg-gray-900/70 flex items-center justify-center rounded-xl backdrop-blur-sm">
+          <Spinner />
+        </div>
+      )}
+
       {/* Star Icon (absolutely positioned) */}
       {file.isStarred && (
         <div className="absolute top-2 left-2 text-yellow-400">
@@ -127,67 +144,69 @@ export const FileCard: React.FC<FileCardProps> = ({ file, onShare, isSelected, o
               <FileText className="w-6 h-6 text-gray-500" />
             )}
           </div>
-          <div className="absolute top-2 right-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <MoreVertical className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                {activeFilter !== 'trash' ? (
-                  <>
-                    {!file.isFolder && (
-                      <DropdownMenuItem onSelect={() => onDownload(file)}>
-                        <Download className="mr-2 h-4 w-4" />
-                        <span>Download</span>
+          {!isReadOnly && (
+            <div className="absolute top-2 right-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <MoreVertical className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                  {activeFilter !== 'trash' ? (
+                    <>
+                      {!file.isFolder && (
+                        <DropdownMenuItem onSelect={() => onDownload(file)}>
+                          <Download className="mr-2 h-4 w-4" />
+                          <span>Download</span>
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuItem onSelect={() => onToggleStar([file.id])}>
+                        <Star className={`mr-2 h-4 w-4 ${file.isStarred ? 'text-yellow-400 fill-yellow-400' : ''}`} />
+                        <span>{file.isStarred ? 'Unstar' : 'Star'}</span>
                       </DropdownMenuItem>
-                    )}
-                    <DropdownMenuItem onSelect={() => onToggleStar([file.id])}>
-                      <Star className={`mr-2 h-4 w-4 ${file.isStarred ? 'text-yellow-400 fill-yellow-400' : ''}`} />
-                      <span>{file.isStarred ? 'Unstar' : 'Star'}</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onMove(file)}>
-                      <Move className="w-4 h-4 mr-2" />
-                      <span>Move</span>
-                    </DropdownMenuItem>
-                    {!file.isFolder && (
-                      <DropdownMenuItem onClick={() => onCopy(file)}>
-                        <Copy className="mr-2 h-4 w-4" />
-                        <span>Make a copy</span>
+                      <DropdownMenuItem onClick={() => onMove(file)}>
+                        <Move className="w-4 h-4 mr-2" />
+                        <span>Move</span>
                       </DropdownMenuItem>
-                    )}
-                    {!file.isFolder && (
-                      <DropdownMenuItem onSelect={() => onShare(file)}>
-                        <Share className="mr-2 h-4 w-4" />
-                        <span>Share</span>
+                      {!file.isFolder && (
+                        <DropdownMenuItem onClick={() => onCopy(file)}>
+                          <Copy className="mr-2 h-4 w-4" />
+                          <span>Make a copy</span>
+                        </DropdownMenuItem>
+                      )}
+                      {!file.isFolder && (
+                        <DropdownMenuItem onSelect={() => onShare(file)}>
+                          <Share className="mr-2 h-4 w-4" />
+                          <span>Share</span>
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuItem onSelect={handleStartRename}>
+                        <PenSquare className="mr-2 h-4 w-4" />
+                        <span>Rename</span>
                       </DropdownMenuItem>
-                    )}
-                    <DropdownMenuItem onSelect={handleStartRename}>
-                      <PenSquare className="mr-2 h-4 w-4" />
-                      <span>Rename</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onSelect={() => onMoveToTrash(file.id)} className="text-red-500 focus:bg-red-500 focus:text-white">
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      <span>Move to Trash</span>
-                    </DropdownMenuItem>
-                  </>
-                ) : (
-                  <>
-                    <DropdownMenuItem onSelect={() => onRestoreFile(file.id)}>
-                      <RefreshCw className="mr-2 h-4 w-4" />
-                      <span>Restore</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => onDeletePermanently(file.id)} className="text-red-500 focus:bg-red-500 focus:text-white">
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      <span>Delete Permanently</span>
-                    </DropdownMenuItem>
-                  </>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onSelect={() => onMoveToTrash(file.id)} className="text-red-500 focus:bg-red-500 focus:text-white">
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        <span>Move to Trash</span>
+                      </DropdownMenuItem>
+                    </>
+                  ) : (
+                    <>
+                      <DropdownMenuItem onSelect={() => onRestoreFile(file.id)}>
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                        <span>Restore</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => onDeletePermanently(file.id)} className="text-red-500 focus:bg-red-500 focus:text-white">
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        <span>Delete Permanently</span>
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )}
         </div>
       </div>
 

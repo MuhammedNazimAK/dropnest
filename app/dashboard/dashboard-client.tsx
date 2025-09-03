@@ -19,6 +19,8 @@ import { FilePreviewModal } from '@/components/dashboard/modals/FilePreviewModal
 import { ShareModal } from '@/components/dashboard/modals/ShareModal';
 import { RecentFiles } from '@/components/dashboard/RecentFiles';
 import { FileViewLoader } from '@/components/dashboard/views/FileViewLoader';
+import { Skeleton } from '@/components/ui/skeleton';
+
 
 import {
   DndContext,
@@ -31,6 +33,7 @@ import {
   KeyboardSensor
 } from '@dnd-kit/core';
 import { toast } from 'sonner';
+import { fi } from 'zod/v4/locales';
 
 interface DashboardClientProps {
   initialFiles: DbFile[];
@@ -56,6 +59,10 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [fileToPreview, setFileToPreview] = useState<Required<DbFile> | null>(null);
   const [fileToShare, setFileToShare] = useState<Required<DbFile> | null>(null);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [recentFiles, setRecentFiles] = useState<Required<DbFile>[] | null>(null);
+  const [fileStatuses, setFileStatuses] = useState<{ [fileId: string]: 'loading' }>({});
+
 
   // --- DATA HOOKS ---
 
@@ -272,41 +279,61 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
     setFiles(initialFiles);
   }, [initialFiles, setFiles]);
 
-  const handleItemClick = (file: Required<DbFile>, event: React.MouseEvent) => {
-    if (file.isFolder) {
-      // If it's a folder, just handle selection
-      handleSelection(file.id, event);
-    } else {
-      // If it's a file, a single click should open the preview
-      setFileToPreview(file);
-    }
-  };
-
   const handleConfirmOperation = async (fileId: string, targetFolderId: string | null) => {
+
     const idsToProcess = selectedIds.size > 0 ? Array.from(selectedIds) : [fileId];
+    const isMove = modalMode === 'move';
+    const actionText = isMove ? 'Moving' : 'Copying';
 
-    if (modalMode === 'move') {
-      if (idsToProcess.length > 1) {
-        await bulkMoveFiles(idsToProcess, targetFolderId);
+    const newStatuses: Record<string, string> = {};
+    idsToProcess.forEach(id => {
+      newStatuses[id] = 'loading';
+    });
+
+    const operationToast = toast.loading(`${actionText} ${idsToProcess.length} item(s)...`);
+    handleCloseModal();
+
+    try {
+      if (isMove) {
+        if (idsToProcess.length > 1) {
+          await bulkMoveFiles(idsToProcess, targetFolderId);
+        } else {
+          await moveFile(idsToProcess[0], targetFolderId);
+        }
+
       } else {
-        await moveFile(idsToProcess[0], targetFolderId);
-      }
-    }
-    else if (modalMode === 'copy') {
 
-      const newFiles = await bulkCopyFiles(idsToProcess, targetFolderId);
-
-      if (newFiles && newFiles.length > 0) {
-        const filesForCurrentFolder = newFiles.filter(f => f.parentId === currentFolderId);
-        if (filesForCurrentFolder.length > 0) {
-          setFiles(prev => [...prev, ...filesForCurrentFolder]);
+        // This is the 'copy' operation
+        const newFiles = await bulkCopyFiles(idsToProcess, targetFolderId);
+        if (newFiles && newFiles.length > 0) {
+          // If the copy was made into the folder we're currently looking at,
+          // add the new files to the view.
+          const filesForCurrentFolder = newFiles.filter(f => f.parentId === currentFolderId);
+          if (filesForCurrentFolder.length > 0) {
+            setFiles(prev => [...prev, ...filesForCurrentFolder]);
+          }
         }
       }
-    }
 
-    setSelectedIds(new Set()); // Clear selection after the operation starts
-    handleCloseModal();
-    await refreshFiles(currentFolderId);
+      // 2. On success, update the toast to a success message.
+      toast.success(`Items ${isMove ? 'moved' : 'copied'} successfully!`, { id: operationToast });
+
+    } catch (error) {
+      // 3. If any of the async operations fail, catch the error.
+      console.error(`Operation failed: ${actionText}`, error);
+      toast.error(`Failed to ${actionText.toLowerCase()} items.`, { id: operationToast });
+
+      // 4. IMPORTANT: If an operation fails, refresh the files to ensure the UI
+      // is in sync with the actual database state.
+      await refreshFiles(currentFolderId);
+
+    } finally {
+      // 5. No matter what, clear the selection.
+      setSelectedIds(new Set());
+      setTimeout(() => {
+        setFileStatuses({});
+      }, 1000);
+    }
   };
 
   const sensors = useSensors(
@@ -356,12 +383,12 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
     const searchTimeout = setTimeout(async () => {
       if (searchQuery.length > 1) { // Only search if query is > 1 character
         setIsSearching(true);
+        setSearchResults(null);
         try {
           const response = await fetch(`/api/files/search?q=${searchQuery}`);
           const data = await response.json();
-          if (response.ok) {
-            setSearchResults(data);
-          }
+          setSearchResults(data);
+
         } catch (error) {
           console.error("Failed to fetch search results:", error);
           setSearchResults([]); // Show empty on error
@@ -371,14 +398,14 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
       } else {
         setSearchResults(null); // Clear results if search query is empty
       }
-    }, 300); // Wait 300ms after the user stops typing
+    }, 400); // Wait 300ms after the user stops typing
 
     return () => clearTimeout(searchTimeout); // Cleanup on unmount or if query changes
   }, [searchQuery]);
 
   // --- Logic to decide which files to display ---
-  const filesToDisplay = searchQuery.length > 1 ? searchResults : filteredFiles;
   const isSearchActive = searchQuery.length > 1 && searchResults !== null;
+  const filesToDisplay = isSearchActive ? searchResults : files;
 
   // Effect to apply dark mode class to the body
   useEffect(() => {
@@ -399,7 +426,21 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
     refreshFiles(currentFolderId);
   }, [currentFolderId, refreshFiles]);
 
-  const isMainContentLoading = isSearching || files === null;
+  useEffect(() => {
+    // Will wait for two things to complete:
+    // 1. A minimum timer of 800ms (0.8 seconds).
+    // 2. The fetch request for recent files.
+    const timer = new Promise(resolve => setTimeout(resolve, 800));
+    const dataFetch = fetch('/api/files/recent').then(res => res.json());
+
+    // Promise.all ensures both are finished before stop loading.
+    Promise.all([dataFetch, timer]).then(([fetchedRecentFiles]) => {
+      setRecentFiles(fetchedRecentFiles);
+      setIsInitialLoading(false); // Stop loading ONLY after both are done.
+    });
+  }, []);
+
+  const isMainContentLoading = isInitialLoading;
 
   // --- RENDER ---
 
@@ -429,81 +470,75 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
           setIsDarkMode={setIsDarkMode}
         />
 
-        <main className="flex-1 overflow-y-auto p-6">
-          <RecentFiles onFilePreview={setFileToPreview} />
-
+        <main className="flex-1 overflow-y-auto p-6 max-w-8xl mx-auto w-full">
           {isMainContentLoading ? (
-            // --- MAIN LOADING STATE ---
-            <FileViewLoader />
+            <>
+              <div className='mt-8'>
+                <h2 className="text-lg font-semibold mb-4">Recent</h2>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Skeleton key={i} className="h-52 w-full rounded-xl" />
+                  ))}
+                </div>
+                <hr className="my-8" />
+              </div>
+              <FileViewLoader />
+            </>
           ) : (
-            <DndContext
-              sensors={sensors}
-              onDragStart={(event) => setActiveDragItem(event.active)}
-              onDragEnd={handleDragEnd}>
-              {/* ===== MAIN CONTENT AREA ===== */}
-              <BulkActionsToolbar
-                selectedCount={selectedIds.size}
-                activeFilter={activeFilter}
-                onDelete={handleBulkDelete}
-                onMove={handleBulkMove}
-                onCopy={handleBulkCopy}
-                onRestore={handleBulkRestore}
-                onClearSelection={() => setSelectedIds(new Set())}
-                disableCopy={selectionContainsFolder}
-                onToggleStar={handleBulkToggleStar}
-              />
-              <FileView
-                selectedIds={selectedIds}
-                files={filteredFiles as Required<DbFile>[]}
-                viewMode={viewMode}
-                activeFilter={activeFilter}
-                onToggleStar={toggleStar}
-                onMoveToTrash={moveToTrash}
-                onFolderOpen={handleDoubleClick}
-                onRestoreFile={restoreFile}
-                onDeletePermanently={deleteFilePermanently}
-                onRename={renameItem}
-                onMove={(file) => handleOpenModal(file, 'move')}
-                onCopy={(file) => handleOpenModal(file, 'copy')}
-                onDownload={(file) => window.open(file.fileUrl, '_blank')} // Simple download handler
-                onUploadClick={() => setIsUploadModalOpen(true)}
-                onFileSelect={handleSelection}
-                renamingId={renamingId}
-                onStartRename={handleStartRename}
-                onConfirmRename={handleConfirmRename}
-                onCancelRename={handleCancelRename}
-                onDoubleClick={handleDoubleClick}
-                onShare={(file) => setFileToShare(file)}
-              />
-              {/* --- ADD THE DRAG OVERLAY --- */}
-              <DragOverlay>
-                {activeDragItem ? (
-                  // When an item is being dragged, render a FileCard here
-                  viewMode === 'grid' ? (
-                    <FileCard
-                      file={activeDragItem.data.current?.file}
-                      // dummy functions for props that aren't used in the overlay's appearance
-                      onMove={() => { }}
-                      onCopy={() => { }}
-                      onDoubleClick={() => { }}
-                      activeFilter={'all'}
-                      onDownload={() => { }}
-                      onToggleStar={() => { }}
-                      onMoveToTrash={() => { }}
-                      onRestoreFile={() => { }}
-                      onDeletePermanently={() => { }}
-                      isSelected={false}
-                      onSelect={() => { }}
-                      renamingId={null}
-                      onStartRename={() => { }}
-                      onConfirmRename={() => { }}
-                      onCancelRename={() => { }}
-                      onShare={() => { }}
-                    />
-                  ) : (
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg">
-                      <FileListRow
+            <>
+              {breadcrumbs.length === 1 && activeFilter === 'all' && (
+                <RecentFiles
+                  files={recentFiles}
+                  onFilePreview={setFileToPreview}
+                />
+              )}
+              <DndContext
+                sensors={sensors}
+                onDragStart={(event) => setActiveDragItem(event.active)}
+                onDragEnd={handleDragEnd}>
+                {/* ===== MAIN CONTENT AREA ===== */}
+                <BulkActionsToolbar
+                  selectedCount={selectedIds.size}
+                  activeFilter={activeFilter}
+                  onDelete={handleBulkDelete}
+                  onMove={handleBulkMove}
+                  onCopy={handleBulkCopy}
+                  onRestore={handleBulkRestore}
+                  onClearSelection={() => setSelectedIds(new Set())}
+                  disableCopy={selectionContainsFolder}
+                  onToggleStar={handleBulkToggleStar}
+                />
+                <FileView
+                  selectedIds={selectedIds}
+                  files={filesToDisplay as Required<DbFile>[]}
+                  fileStatuses={fileStatuses}
+                  viewMode={viewMode}
+                  activeFilter={activeFilter}
+                  onToggleStar={toggleStar}
+                  onMoveToTrash={moveToTrash}
+                  onFolderOpen={handleDoubleClick}
+                  onRestoreFile={restoreFile}
+                  onDeletePermanently={deleteFilePermanently}
+                  onRename={renameItem}
+                  onMove={(file) => handleOpenModal(file, 'move')}
+                  onCopy={(file) => handleOpenModal(file, 'copy')}
+                  onDownload={(file) => window.open(file.fileUrl, '_blank')} // Simple download handler
+                  onUploadClick={() => setIsUploadModalOpen(true)}
+                  onFileSelect={handleSelection}
+                  renamingId={renamingId}
+                  onStartRename={handleStartRename}
+                  onConfirmRename={handleConfirmRename}
+                  onCancelRename={handleCancelRename}
+                  onDoubleClick={handleDoubleClick}
+                  onShare={(file) => setFileToShare(file)}
+                />
+                <DragOverlay>
+                  {activeDragItem ? (
+                    // When an item is being dragged, render a FileCard here
+                    viewMode === 'grid' ? (
+                      <FileCard
                         file={activeDragItem.data.current?.file}
+                        // dummy functions for props that aren't used in the overlay's appearance
                         onMove={() => { }}
                         onCopy={() => { }}
                         onDoubleClick={() => { }}
@@ -521,11 +556,33 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
                         onCancelRename={() => { }}
                         onShare={() => { }}
                       />
-                    </div>
-                  )
-                ) : null}
-              </DragOverlay>
-            </DndContext>
+                    ) : (
+                      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg">
+                        <FileListRow
+                          file={activeDragItem.data.current?.file}
+                          onMove={() => { }}
+                          onCopy={() => { }}
+                          onDoubleClick={() => { }}
+                          activeFilter={'all'}
+                          onDownload={() => { }}
+                          onToggleStar={() => { }}
+                          onMoveToTrash={() => { }}
+                          onRestoreFile={() => { }}
+                          onDeletePermanently={() => { }}
+                          isSelected={false}
+                          onSelect={() => { }}
+                          renamingId={null}
+                          onStartRename={() => { }}
+                          onConfirmRename={() => { }}
+                          onCancelRename={() => { }}
+                          onShare={() => { }}
+                        />
+                      </div>
+                    )
+                  ) : null}
+                </DragOverlay>
+              </DndContext>
+            </>
           )}
         </main>
       </div>

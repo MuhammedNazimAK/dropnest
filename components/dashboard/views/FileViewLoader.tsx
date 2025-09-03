@@ -1,4 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { FileCardSkeleton } from "../ui/FileCardSkeleton";
 
 export const FileViewLoader = () => {
   return (
@@ -12,13 +13,9 @@ export const FileViewLoader = () => {
         </div>
       </div>
 
-      {/* Skeleton Grid for File Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         {Array.from({ length: 10 }).map((_, i) => (
-          <div key={i} className="flex flex-col space-y-2">
-            <Skeleton className="h-28 w-full rounded-lg" />
-            <Skeleton className="h-5 w-3/4" />
-          </div>
+          <FileCardSkeleton key={i} />
         ))}
       </div>
     </div>
