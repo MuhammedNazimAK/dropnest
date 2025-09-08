@@ -37,9 +37,10 @@ interface FileListRowProps {
     onRestoreFile: (fileId: string) => void;
     onDeletePermanently: (fileId: string) => void;
     onShare: (file: Required<FileType>) => void;
+    status?: 'loading';
 }
 
-export const FileListRow: React.FC<FileListRowProps> = ({ renamingId, onShare, onStartRename, onConfirmRename, onCancelRename, file, isSelected, onSelect, onMove, onCopy, onDoubleClick, activeFilter, onToggleStar, onMoveToTrash, onDownload, onRestoreFile, onDeletePermanently }) => {
+export const FileListRow: React.FC<FileListRowProps> = ({ renamingId, status, onShare, onStartRename, onConfirmRename, onCancelRename, file, isSelected, onSelect, onMove, onCopy, onDoubleClick, activeFilter, onToggleStar, onMoveToTrash, onDownload, onRestoreFile, onDeletePermanently }) => {
 
     const {
         attributes,
@@ -106,6 +107,14 @@ export const FileListRow: React.FC<FileListRowProps> = ({ renamingId, onShare, o
                 { "hover:bg-gray-100 dark:hover:bg-gray-800/80": !isDragging }
             )}
         >
+
+            {status === 'loading' && (
+                <div className="absolute inset-0 z-10 bg-white/70 dark:bg-gray-900/70 flex items-center justify-center rounded-lg backdrop-blur-sm">
+                    {/* You can add a smaller spinner here if you like */}
+                    <p className="text-sm font-semibold">Processing...</p>
+                </div>
+            )}
+
             {/* Name & Icon */}
             <div className="col-span-6 flex items-center space-x-4">
                 {isFolder ? <Folder className="w-5 h-5 text-blue-500 flex-shrink-0" /> : <FileText className="w-5 h-5 text-gray-500 flex-shrink-0" />}

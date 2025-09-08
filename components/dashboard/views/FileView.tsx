@@ -28,11 +28,12 @@ interface FileViewProps {
   onCancelRename: () => void;
   onDoubleClick: (item: Required<DbFile>) => void;
   onShare: (file: Required<DbFile>) => void;
+  fileStatuses: { [fileId: string]: 'loading' };
 }
 
 
 export const FileView: React.FC<FileViewProps> = (props) => {
-  const { files, viewMode, activeFilter, onFolderOpen, onUploadClick, selectedIds, onFileSelect, onDoubleClick } = props;
+  const { files, viewMode, activeFilter, onFolderOpen, onUploadClick, selectedIds, onFileSelect, onDoubleClick, fileStatuses } = props;
 
   if (files.length === 0) {
     const messages = {
@@ -64,6 +65,7 @@ export const FileView: React.FC<FileViewProps> = (props) => {
             isSelected={selectedIds.has(file.id)}
             onSelect={(event) => onFileSelect(file.id, event)}
             onDoubleClick={() => onDoubleClick(file)}
+            status={fileStatuses[file.id]}
           />
         ))}
       </div>
