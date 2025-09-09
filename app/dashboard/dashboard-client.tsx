@@ -292,11 +292,6 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
     }
   };
 
-  const handleModalFileUpload = (filesToUpload: FileList) => {
-    handleFileUpload(filesToUpload, currentFolderId);
-    setIsUploadModalOpen(false);
-  };
-
   // Drag and drop handlers
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -458,7 +453,7 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
                   fileStatuses={fileStatuses}
                   viewMode={viewMode}
                   activeFilter={activeFilter}
-                  onToggleStar={toggleStar}
+                  onToggleStar={handleBulkToggleStar}
                   onMoveToTrash={moveToTrash}
                   onFolderOpen={handleDoubleClick}
                   onRestoreFile={restoreFile}
@@ -533,10 +528,6 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
       <UploadModal
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
-        onFileUpload={handleModalFileUpload}
-        isUploading={isUploading}
-        uploadProgress={uploadProgress}
-        currentFolderId={currentFolderId}
       />
 
       <FileOperationModal

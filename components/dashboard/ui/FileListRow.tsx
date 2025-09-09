@@ -29,13 +29,13 @@ interface FileListRowProps {
     onCopy: (file: Required<FileType>) => void;
     onDoubleClick: () => void;
     onToggleStar: (fileIds: string[]) => void;
-    onMoveToTrash: (fileId: string) => void;
+    onMoveToTrash: (fileId: string[]) => void;
     onStartRename: (fileId: string) => void;
     onConfirmRename: (fileId: string, newName: string) => void;
     onCancelRename: () => void;
     onDownload: (file: FileType) => void;
-    onRestoreFile: (fileId: string) => void;
-    onDeletePermanently: (fileId: string) => void;
+    onRestoreFile: (fileId: string[]) => void;
+    onDeletePermanently: (fileId: string[]) => void;
     onShare: (file: Required<FileType>) => void;
     status?: 'loading';
 }
@@ -185,7 +185,7 @@ export const FileListRow: React.FC<FileListRowProps> = ({ renamingId, status, on
                                     <span>Rename</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem onSelect={() => onMoveToTrash(file.id)} className="text-red-500 focus:bg-red-500 focus:text-white">
+                                <DropdownMenuItem onSelect={() => onMoveToTrash([file.id])} className="text-red-500 focus:bg-red-500 focus:text-white">
                                     <Trash2 className="mr-2 h-4 w-4" />
                                     <span>Move to Trash</span>
                                 </DropdownMenuItem>
@@ -193,11 +193,11 @@ export const FileListRow: React.FC<FileListRowProps> = ({ renamingId, status, on
                         ) : (
                             /* Show these actions only for the trash view */
                             <>
-                                <DropdownMenuItem onSelect={() => onRestoreFile(file.id)}>
+                                <DropdownMenuItem onSelect={() => onRestoreFile([file.id])}>
                                     <RefreshCw className="mr-2 h-4 w-4" />
                                     <span>Restore</span>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onSelect={() => onDeletePermanently(file.id)} className="text-red-500 focus:bg-red-500 focus:text-white">
+                                <DropdownMenuItem onSelect={() => onDeletePermanently([file.id])} className="text-red-500 focus:bg-red-500 focus:text-white">
                                     <Trash2 className="mr-2 h-4 w-4" />
                                     <span>Delete Permanently</span>
                                 </DropdownMenuItem>

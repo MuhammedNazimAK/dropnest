@@ -5,6 +5,8 @@ import type { File as DbFile } from '@/lib/db/schema';
 import { EmptyState } from '@/components/dashboard/ui/EmptyState';
 import { FileCard } from '@/components/dashboard/ui/FileCard';
 import { FileListRow } from '@/components/dashboard/ui/FileListRow';
+import { FileStatus } from '@/lib/store/useFileStore';
+
 
 interface FileViewProps {
   files: Required<DbFile>[];
@@ -12,9 +14,8 @@ interface FileViewProps {
   activeFilter: 'all' | 'starred' | 'trash';
   onFolderOpen: (folder: DbFile) => void;
   onToggleStar: (fileId: string[]) => void;
-  onMoveToTrash: (fileId: string) => void;
-  onRestoreFile: (fileId: string) => void;
-  onDeletePermanently: (fileId: string) => void;
+  onRestoreFile: (fileIds: string[]) => void;
+  onDeletePermanently: (fileId: string[]) => void;
   onRename: (fileId: string, newName: string) => void;
   onMove: (file: Required<DbFile>) => void;
   onCopy: (file: Required<DbFile>) => void;
@@ -28,7 +29,8 @@ interface FileViewProps {
   onCancelRename: () => void;
   onDoubleClick: (item: Required<DbFile>) => void;
   onShare: (file: Required<DbFile>) => void;
-  fileStatuses: { [fileId: string]: 'loading' };
+  fileStatuses: Record<string, FileStatus>;
+  onMoveToTrash: (fileIds: string[]) => void;
 }
 
 
@@ -65,7 +67,6 @@ export const FileView: React.FC<FileViewProps> = (props) => {
             isSelected={selectedIds.has(file.id)}
             onSelect={(event) => onFileSelect(file.id, event)}
             onDoubleClick={() => onDoubleClick(file)}
-            status={fileStatuses[file.id]}
           />
         ))}
       </div>
