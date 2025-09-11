@@ -7,16 +7,16 @@ import { NextResponse } from "next/server";
 import { deleteFilesService } from "@/lib/services/file.service";
 
 const imageKit = new ImageKit({
-  publicKey: process.env.IMAGEKIT_PUBLIC_KEY || "",
-  privateKey: process.env.IMAGEKIT_PRIVATE_KEY || "",
-  urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT || ""
-})  
+    publicKey: process.env.IMAGEKIT_PUBLIC_KEY || "",
+    privateKey: process.env.IMAGEKIT_PRIVATE_KEY || "",
+    urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT || ""
+})
 
 export async function DELETE() {
     try {
         const { userId } = await auth();
         if (!userId) {
-            return NextResponse.json({error: "Unauthorized"}, {status: 401});
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
         // Step 1: Find all trashed items for the user
@@ -25,7 +25,7 @@ export async function DELETE() {
             .where(and(eq(files.isTrash, true), eq(files.userId, userId)));
 
         if (trashedItems.length === 0) {
-            return NextResponse.json({ success: true, message: "Trash is already empty." });
+            return NextResponse.json({ success: true, message: "Trash is already empty." }, { status: 200 });
         }
 
         // Step 2: Collect the IDs of the trashed items

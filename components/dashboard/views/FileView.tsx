@@ -5,7 +5,7 @@ import type { File as DbFile } from '@/lib/db/schema';
 import { EmptyState } from '@/components/dashboard/ui/EmptyState';
 import { FileCard } from '@/components/dashboard/ui/FileCard';
 import { FileListRow } from '@/components/dashboard/ui/FileListRow';
-import { FileStatus } from '@/lib/store/useFileStore';
+import { FileStatus, useFileStore } from '@/lib/store/useFileStore';
 
 
 interface FileViewProps {
@@ -29,13 +29,12 @@ interface FileViewProps {
   onCancelRename: () => void;
   onDoubleClick: (item: Required<DbFile>) => void;
   onShare: (file: Required<DbFile>) => void;
-  fileStatuses: Record<string, FileStatus>;
   onMoveToTrash: (fileIds: string[]) => void;
 }
 
 
 export const FileView: React.FC<FileViewProps> = (props) => {
-  const { files, viewMode, activeFilter, onFolderOpen, onUploadClick, selectedIds, onFileSelect, onDoubleClick, fileStatuses } = props;
+  const { files, viewMode, activeFilter, onFolderOpen, onUploadClick, selectedIds, onFileSelect, onDoubleClick } = props;
 
   if (files.length === 0) {
     const messages = {
@@ -55,6 +54,7 @@ export const FileView: React.FC<FileViewProps> = (props) => {
 
   // Pass all props down to the children
   const childProps = { ...props };
+  const fileStatuses = useFileStore(state => state.fileStatuses);
 
   if (viewMode === 'grid') {
     return (
@@ -67,6 +67,7 @@ export const FileView: React.FC<FileViewProps> = (props) => {
             isSelected={selectedIds.has(file.id)}
             onSelect={(event) => onFileSelect(file.id, event)}
             onDoubleClick={() => onDoubleClick(file)}
+            status={fileStatuses[file.id]} 
           />
         ))}
       </div>

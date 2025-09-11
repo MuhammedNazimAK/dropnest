@@ -5,13 +5,16 @@ import { eq, and } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function PATCH(request: NextRequest) {
+  console.log('reached move to trash')
   try {
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    console.log('request json', request.json());
     const { fileId } = await request.json();
+    console.log("fileidasdfasdfasdaf", fileId)
 
     if (!fileId) {
       return NextResponse.json({ error: "File ID is required" }, { status: 400 });

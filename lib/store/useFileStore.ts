@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { type File as DbFile } from '@/lib/db/schema';
 import { createId } from '@paralleldrive/cuid2';
+import { StateCreator } from 'zustand';
+
 
 export type FileStatus = 'loading' | 'success' | 'error';
 
@@ -9,6 +11,16 @@ export interface UploadTask {
     file: File;
     progress: number;
     status: 'uploading' | 'processing' | 'success' | 'error';
+}
+
+export interface OperationTask {
+    id: string;
+    type: 'move' | 'copy' | 'delete' | 'trash';
+    status: 'in-progress' | 'success' | 'error';
+    progress: number;
+    itemCount: number;
+    sourceNames: string[];
+    createdAt: Date;
 }
 
 interface Breadcrumb {
@@ -22,6 +34,7 @@ interface FileStoreState {
     breadcrumbs: Breadcrumb[];
     fileStatuses: Record<string, FileStatus>;
     uploadTasks: UploadTask[];
+    operationTasks: OperationTask[];
 
     selectedIds: Set<string>;
     lastSelectedId: string | null;
@@ -42,12 +55,10 @@ interface FileStoreState {
     deleteFilePermanently: (fileIds: string[]) => Promise<void>;
     emptyTrash: () => Promise<void>;
     renameItem: (fileId: string, newName: string) => Promise<void>;
-    moveFile: (fileId: string, targetFolderId: string | null) => Promise<void>;
+    moveFiles: (fileIds: string[], targetFolderId: string | null) => Promise<void>;
+    copyFiles: (fileIds: string[], targetFolderId: string | null) => Promise<void>;
     createFolder: (name: string, parentId: string | null) => Promise<DbFile>;
     uploadFiles: (files: FileList, parentId: string | null) => void;
-
-    bulkMoveFiles: (fileIds: string[], targetFolderId: string | null) => Promise<void>;
-    bulkCopyFiles: (fileIds: string[], targetFolderId: string | null) => Promise<Required<DbFile>[]>;
 
     setSelectedIds: (selectedIds: Set<string>) => void;
     setLastSelectedId: (id: string | null) => void;
@@ -57,19 +68,21 @@ interface FileStoreState {
     setActiveFilter: (filter: 'all' | 'starred' | 'trash') => void;
 
     clearCompletedUploads: () => void;
+    clearCompletedTasks: () => void;
 }
 
-export const useFileStore = create<FileStoreState>((set, get) => ({
+const createFileSlice: StateCreator<FileStoreState> = (set, get) => ({
 
     files: [],
     currentFolderId: null,
     breadcrumbs: [{ id: null, name: 'Home' }],
     fileStatuses: {},
+    uploadTasks: [],
+    operationTasks: [],
     isOperating: false,
     selectedIds: new Set(),
     lastSelectedId: null,
     activeFilter: 'all',
-    uploadTasks: [],
 
     // --- CORE STATE MANAGEMENT ---
     initializeFiles: (files) => set({ files }),
@@ -96,27 +109,45 @@ export const useFileStore = create<FileStoreState>((set, get) => ({
     },
 
     // --- NAVIGATION ---
-    navigateToFolder: (folderId, folderName = 'Folder') => {
-        set(state => {
-            // Check if we're already at this folder to avoid duplicate breadcrumbs
-            if (state.currentFolderId === folderId) return state;
+    navigateToFolder: async (folderId, folderName = 'Folder') => {
 
-            return {
-                currentFolderId: folderId,
-                breadcrumbs: [...state.breadcrumbs, { id: folderId, name: folderName }],
-                selectedIds: new Set(),
-                lastSelectedId: null,
-            };
-        });
-    },
+        const { refreshFiles, currentFolderId } = get();
 
-    navigateToBreadcrumb: (index) => {
+        if (currentFolderId === folderId) return;
+
         set(state => ({
-            breadcrumbs: state.breadcrumbs.slice(0, index + 1),
-            currentFolderId: state.breadcrumbs[index].id,
+            currentFolderId: folderId,
+            breadcrumbs: [...state.breadcrumbs, { id: folderId, name: folderName }],
             selectedIds: new Set(),
             lastSelectedId: null,
         }));
+
+        try {
+            await refreshFiles(folderId);
+        } catch (error) {
+            console.error("Failed to load folder contents:", error);
+        }
+    },
+
+    navigateToBreadcrumb: async (index) => {
+
+        const { refreshFiles, breadcrumbs } = get();
+
+        const newBreadcrumbs = breadcrumbs.slice(0, index + 1);
+        const newFolderId = newBreadcrumbs[index].id;
+
+        set({
+            breadcrumbs: newBreadcrumbs,
+            currentFolderId: newFolderId,
+            selectedIds: new Set(),
+            lastSelectedId: null,
+        });
+
+        try {
+            await refreshFiles(newFolderId);
+        } catch (error) {
+            console.error("Failed to load folder contents:", error);
+        }
     },
 
     buildBreadcrumbs: async (folderId: string) => {
@@ -207,29 +238,40 @@ export const useFileStore = create<FileStoreState>((set, get) => ({
 
         const { setFileStatus } = get();
         setFileStatus(fileIds, 'loading');
-        const originalFiles = get().files;
-        const idsToMove = new Set(fileIds);
+
+        set(state => ({
+            files: state.files.map(file =>
+                fileIds.includes(file.id) ? { ...file, isTrash: true } : file
+            ),
+            selectedIds: new Set(),
+            lastSelectedId: null,
+        }));
 
         try {
             await Promise.all(
-                fileIds.map(async (fileId) => {
-                    const response = await fetch(`/api/files/${fileId}/trash`, {
+                fileIds.map(fileId =>
+                    fetch(`/api/files/${fileId}/trash`, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ fileId }),
-                    });
-
-                    if (!response.ok) throw new Error('Failed to move to trash');
-
-                    set(state => ({ files: state.files.map(file => idsToMove.has(file.id) ? { ...file, isTrash: true } : file), }));
-                    setFileStatus(fileIds, 'success');
-                    return response.json();
-                })
+                    }).then(res => {
+                        if (!res.ok) throw new Error('Failed to move to trash');
+                    })
+                )
             );
+
+            setFileStatus(fileIds, null);
+
         } catch (error) {
-            set({ files: originalFiles });
+            console.error("Move to trash failed, reverting state:", error);
+
+            set(state => ({
+                files: state.files.map(file =>
+                    fileIds.includes(file.id) ? { ...file, isTrash: false } : file
+                ),
+            }));
             setFileStatus(fileIds, 'error');
             throw error;
+
         } finally {
             setTimeout(() => setFileStatus(fileIds, null), 2000);
         }
@@ -270,43 +312,61 @@ export const useFileStore = create<FileStoreState>((set, get) => ({
     },
 
     deleteFilePermanently: async (fileIds: string[]) => {
-        if (fileIds.length === 0) return;
-
         const { setFileStatus } = get();
-        setFileStatus(fileIds, 'loading');
         const originalFiles = get().files;
 
-        try {
-            const results = await Promise.all(
-                fileIds.map(async (fileId) => {
-                    const response = await fetch(`/api/files/${fileId}/delete`, {
-                        method: 'DELETE',
-                        headers: { 'Content-Type': 'application/json' },
-                    });
+        setFileStatus(fileIds, 'loading');
 
-                    if (!response.ok) throw new Error('Failed to delete file permanently');
-                    return response.json();
-                })
-            );
+        const filesToDelete = originalFiles.filter(f => fileIds.includes(f.id));
+        if (filesToDelete.length === 0) {
+            setFileStatus(fileIds, null);
+            return;
+        }
 
-            // Collect all deleted IDs from responses
-            const allDeletedIds = results.reduce((acc, data) => {
-                if (data.deletedIds?.length > 0) {
-                    return [...acc, ...data.deletedIds];
-                }
-                return acc;
-            }, [] as string[]);
+        const taskId = createId();
+        const newTask: OperationTask = {
+            id: taskId,
+            type: 'delete',
+            status: 'in-progress',
+            progress: 0,
+            itemCount: filesToDelete.length,
+            sourceNames: filesToDelete.map(f => f.name),
+            createdAt: new Date(),
+        };
 
-            // Remove deleted files from state
+        set(state => ({ operationTasks: [...state.operationTasks, newTask] }));
+
+        const updateTask = (updates: Partial<OperationTask>) => {
             set(state => ({
-                files: state.files.filter(file =>
-                    !allDeletedIds.includes(file.id) && !fileIds.includes(file.id)
+                operationTasks: state.operationTasks.map(t =>
+                    t.id === taskId ? { ...t, ...updates } : t
                 ),
             }));
-            setFileStatus(fileIds, 'success');
+        };
+
+        set(state => ({ files: state.files.filter(f => !fileIds.includes(f.id)) }));
+
+        try {
+            let completedCount = 0;
+
+            for (const file of filesToDelete) {
+                const response = await fetch(`/api/files/${file.id}/delete`, {
+                    method: 'DELETE',
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Failed to delete "${file.name}"`);
+                }
+
+                completedCount++;
+                updateTask({ progress: (completedCount / filesToDelete.length) * 100 });
+            }
+            updateTask({ status: 'success' });
+            setFileStatus(fileIds, null);
 
         } catch (error) {
             set({ files: originalFiles });
+            updateTask({ status: 'error' });
             setFileStatus(fileIds, 'error');
             throw error;
         } finally {
@@ -315,28 +375,47 @@ export const useFileStore = create<FileStoreState>((set, get) => ({
     },
 
     emptyTrash: async () => {
-        const { setFileStatus } = get();
-        setFileStatus([], 'loading');
-        const originalFiles = get().files;
+        const { refreshFiles } = get();
+
+        const taskId = createId();
+        const newTask: OperationTask = {
+            id: taskId,
+            type: 'delete',
+            status: 'in-progress',
+            progress: 0,
+            itemCount: 1,
+            sourceNames: ['All items in Trash'],
+            createdAt: new Date(),
+        };
+
+        set(state => ({ operationTasks: [...state.operationTasks, newTask] }));
+
+        const updateTask = (updates: Partial<OperationTask>) => {
+            set(state => ({
+                operationTasks: state.operationTasks.map(t =>
+                    t.id === taskId ? { ...t, ...updates } : t
+                ),
+            }));
+        };
+
+        set(state => ({ files: [], selectedIds: new Set() }));
 
         try {
-
             const response = await fetch('/api/files/empty-trash', {
                 method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ /* userId if needed */ }),
             });
 
-            if (!response.ok) throw new Error('Failed to empty trash');
-            set(state => ({ files: state.files.filter(file => !file.isTrash) }));
-            setFileStatus([], 'success');
+            if (!response.ok) {
+                throw new Error('Failed to empty trash');
+            }
+
+            updateTask({ status: 'success', progress: 100 });
 
         } catch (error) {
-            set({ files: originalFiles });
-            setFileStatus([], 'error');
+            updateTask({ status: 'error' });
+            await refreshFiles();
+
             throw error;
-        } finally {
-            setTimeout(() => setFileStatus([], null), 2000);
         }
     },
 
@@ -399,113 +478,133 @@ export const useFileStore = create<FileStoreState>((set, get) => ({
         }
     },
 
-    moveFile: async (fileId: string, targetFolderId: string | null) => {
-
-        const { setFileStatus } = get();
+    moveFiles: async (fileIds: string[], targetFolderId: string | null) => {
+        const { setFileStatus, refreshFiles } = get();
         const originalFiles = get().files;
-        setFileStatus([fileId], 'loading');
 
-        try {
-            const response = await fetch(`/api/files/${fileId}/move`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ targetFolderId }),
-            });
-            if (!response.ok) throw new Error('Failed to move item');
-
-            set(state => ({ files: state.files.filter(f => f.id !== fileId) }));
-            setFileStatus([fileId], 'success');
-
-        } catch (error) {
-            set({ files: originalFiles });
-            setFileStatus([fileId], 'error');
-            throw error;
-        } finally {
-            setTimeout(() => setFileStatus([fileId], null), 2000);
-        }
-    },
-
-    bulkMoveFiles: async (fileIds: string[], targetFolderId: string | null) => {
-        const { setFileStatus } = get();
+        const taskId = createId();
+        const filesToMove = originalFiles.filter(f => fileIds.includes(f.id));
+        if (filesToMove.length === 0) return;
         setFileStatus(fileIds, 'loading');
-        const originalFiles = get().files;
-        const idsToMove = new Set(fileIds);
+
+        const newTask: OperationTask = {
+            id: taskId,
+            type: 'move',
+            status: 'in-progress',
+            progress: 0,
+            itemCount: fileIds.length,
+            sourceNames: filesToMove.map(f => f.name),
+            createdAt: new Date(),
+        };
+
+        set(state => ({ operationTasks: [...state.operationTasks, newTask] }));
+
+        const updateTask = (updates: Partial<OperationTask>) => {
+            set(state => ({
+                operationTasks: state.operationTasks.map(t =>
+                    t.id === taskId ? { ...t, ...updates } : t
+                ),
+            }));
+        };
 
         try {
-            await Promise.all(
-                fileIds.map(async (fileId) => {
-                    const response = await fetch(`/api/files/${fileId}/move`, {
-                        method: 'PATCH',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ targetFolderId }),
-                    });
+            let completedCount = 0;
+            for (const file of filesToMove) {
+                const response = await fetch(`/api/files/${file.id}/move`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ targetFolderId }),
+                });
 
-                    if (!response.ok) throw new Error('Failed to move item');
-                    set(state => ({ files: state.files.filter(f => !idsToMove.has(f.id)) }));
-                    setFileStatus(fileIds, 'success');
-                })
-            );
+                if (!response.ok) {
+                    throw new Error(`Failed to move "${file.name}"`);
+                }
+
+                set(state => ({ files: state.files.filter(f => f.id !== file.id) }));
+
+                completedCount++;
+                updateTask({ progress: (completedCount / filesToMove.length) * 100 });
+            }
+
+            updateTask({ status: 'success' });
+            setFileStatus(fileIds, null);
+
+            if (get().currentFolderId === targetFolderId) {
+                await refreshFiles();
+            }
 
         } catch (error) {
             set({ files: originalFiles });
+            updateTask({ status: 'error' });
+
+            await refreshFiles();
+
             setFileStatus(fileIds, 'error');
-            throw error;
-        } finally {
             setTimeout(() => setFileStatus(fileIds, null), 2000);
-        }
-    },
 
-    copyFile: async (fileId: string, targetFolderId: string | null) => {
-
-        const { setFileStatus } = get();
-        setFileStatus([fileId], 'loading');
-        try {
-
-            const response = await fetch(`/api/files/${fileId}/copy`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ targetFolderId }),
-            });
-
-            const data = await response.json();
-            if (!response.ok) throw new Error('Failed to copy file');
-            setFileStatus([fileId], 'success');
-            return data.file;
-
-        } catch (error) {
-            setFileStatus([fileId], 'error');
             throw error;
-        } finally {
-            setTimeout(() => setFileStatus([fileId], null), 2000);
         }
     },
 
-    bulkCopyFiles: async (fileIds: string[], targetFolderId: string | null) => {
+    copyFiles: async (fileIds: string[], targetFolderId: string | null) => {
+        const { setFileStatus, refreshFiles } = get();
+        const originalFiles = get().files;
 
-        const { setFileStatus } = get();
         setFileStatus(fileIds, 'loading');
 
+        const filesToCopy = originalFiles.filter(f => fileIds.includes(f.id));
+        if (filesToCopy.length === 0) {
+            setFileStatus(fileIds, null);
+            return;
+        }
+
+        const taskId = createId();
+        const newTask: OperationTask = {
+            id: taskId,
+            type: 'copy',
+            status: 'in-progress',
+            progress: 0,
+            itemCount: filesToCopy.length,
+            sourceNames: filesToCopy.map(f => f.name),
+            createdAt: new Date(),
+        }
+
+        set(state => ({ operationTasks: [...state.operationTasks, newTask] }));
+
+        const updateTask = (updates: Partial<OperationTask>) => {
+            set(state => ({
+                operationTasks: state.operationTasks.map(t =>
+                    t.id === taskId ? { ...t, ...updates } : t
+                ),
+            }));
+        };
+
         try {
 
-            const results = await Promise.all(
-                fileIds.map(async (fileId) => {
-                    const response = await fetch(`/api/files/${fileId}/copy`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ targetFolderId }),
-                    });
+            let completedCount = 0;
 
-                    if (!response.ok) throw new Error('Failed to copy item');
-                    setFileStatus(fileIds, 'success');
-                    return response.json();
-                })
-            );
+            for (const file of filesToCopy) {
+                const response = await fetch(`/api/files/${file.id}/copy`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ targetFolderId }),
+                });
 
-            // Extract new files from results
-            const newFiles = results.map(result => result.file).filter(Boolean);
-            return newFiles;
+                if (!response.ok) {
+                    throw new Error(`Failed to copy "${file.name}"`);
+                }
+
+                completedCount++;
+                updateTask({ progress: (completedCount / filesToCopy.length) * 100 });
+            }
+
+            updateTask({ status: 'success' });
+            if (get().currentFolderId === targetFolderId) {
+                await refreshFiles();
+            }
 
         } catch (error) {
+            updateTask({ status: 'error' });
             setFileStatus(fileIds, 'error');
             throw error;
         } finally {
@@ -666,6 +765,13 @@ export const useFileStore = create<FileStoreState>((set, get) => ({
         }
     },
 
+    clearCompletedTasks: () => {
+        set(state => ({
+            uploadTasks: state.uploadTasks.filter(t => t.status === 'uploading' || t.status === 'processing'),
+            operationTasks: state.operationTasks.filter(t => t.status === 'in-progress'),
+        }));
+    },
+
     // --- SELECTION MANAGEMENT ---
     setSelectedIds: (selectedIds) => set({ selectedIds }),
 
@@ -707,10 +813,11 @@ export const useFileStore = create<FileStoreState>((set, get) => ({
         set({ selectedIds: newSelectedIds, lastSelectedId: fileId });
     },
 
-    // --- FILTER MANAGEMENT ---
     setActiveFilter: (filter) => set({
         activeFilter: filter,
         selectedIds: new Set(),
         lastSelectedId: null
     }),
-}));
+});
+
+export const useFileStore = create<FileStoreState>()(createFileSlice);

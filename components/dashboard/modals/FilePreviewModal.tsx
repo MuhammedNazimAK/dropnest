@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react'; // <-- Import useState and useEffect
+import React, { useState, useEffect } from 'react';
 import type { File as DbFile } from '@/lib/db/schema';
 import { X, Download, File as FileIcon, AlertTriangle } from 'lucide-react';
 import Lightbox from "yet-another-react-lightbox";

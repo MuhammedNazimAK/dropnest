@@ -7,6 +7,8 @@ import { motion } from 'framer-motion';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { clsx } from 'clsx';
 import { RenameInput } from './RenameInput';
+import { useFileStore } from '@/lib/store/useFileStore';
+import { type FileStatus } from '@/lib/store/useFileStore';
 
 // DropdownMenu components from a UI library Shadcn/UI
 import {
@@ -43,7 +45,7 @@ interface FileCardProps {
   onCancelRename: () => void;
   onShare: (file: Required<FileType>) => void;
   isReadOnly?: boolean;
-  status?: 'loading';
+  status?: FileStatus | null;
 }
 
 export const FileCard: React.FC<FileCardProps> = ({ file, status, isReadOnly, onShare, isSelected, onSelect, onMove, onCopy, onDoubleClick, activeFilter, onDownload, onToggleStar, onMoveToTrash, onRestoreFile, onDeletePermanently, onStartRename, renamingId, onConfirmRename, onCancelRename }) => {
@@ -59,6 +61,9 @@ export const FileCard: React.FC<FileCardProps> = ({ file, status, isReadOnly, on
     disabled: renamingId === file.id,
   });
 
+  const fileStatuses = useFileStore(state => state.fileStatuses);
+  const isLoading = status === 'loading';
+  const isError = status === 'error';
 
   const {
     setNodeRef: droppableRef, // A separate ref for the droppable target
@@ -121,7 +126,7 @@ export const FileCard: React.FC<FileCardProps> = ({ file, status, isReadOnly, on
     >
 
       {/* It's the first child of the relative parent, ensuring it covers everything below it. */}
-      {status === 'loading' && (
+      {isLoading && (
         <div className="absolute inset-0 z-10 bg-white/70 dark:bg-gray-900/70 flex items-center justify-center rounded-xl backdrop-blur-sm">
           <Spinner />
         </div>

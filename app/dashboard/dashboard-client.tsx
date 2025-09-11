@@ -4,6 +4,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import type { File as DbFile } from '@/lib/db/schema';
 
 
+import { useFileStore } from '@/lib/store/useFileStore';
 import { Sidebar } from '@/components/dashboard/layout/Sidebar';
 import { Header } from '@/components/dashboard/layout/Header';
 import { FileView } from '@/components/dashboard/views/FileView';
@@ -12,13 +13,13 @@ import { FileOperationModal } from '@/components/dashboard/modals/FileOperationM
 import { FileCard } from '@/components/dashboard/ui/FileCard';
 import { FileListRow } from '@/components/dashboard/ui/FileListRow';
 import { BulkActionsToolbar } from '@/components/ui/BulkActionsToolbar';
-import { UploadProgressTracker } from '@/components/dashboard/upload/UploadProgressTracker';
 import { FilePreviewModal } from '@/components/dashboard/modals/FilePreviewModal';
 import { ShareModal } from '@/components/dashboard/modals/ShareModal';
 import { RecentFiles } from '@/components/dashboard/RecentFiles';
 import { FileViewLoader } from '@/components/dashboard/views/FileViewLoader';
+import { ActivityCenter } from '@/components/dashboard/ActivityCenter';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useFileStore } from '@/lib/store/useFileStore';
+import { toast } from 'sonner';
 
 import {
   DndContext,
@@ -30,70 +31,51 @@ import {
   PointerSensor,
   KeyboardSensor
 } from '@dnd-kit/core';
-import { toast } from 'sonner';
+
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+
 
 interface DashboardClientProps {
   initialFiles: Required<DbFile>[];
   userId: string;
 }
 
-const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId }) => {
+const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles }) => {
 
   // --- ZUSTAND STORE STATE ---
-  // This approach is clean and ensures the component re-renders only when these specific values change.
-  const {
-    files,
-    currentFolderId,
-    breadcrumbs,
-    selectedIds,
-    lastSelectedId,
-    fileStatuses,
-    activeFilter,
-    initializeFiles,
-    setActiveFilter,
-    navigateToFolder,
-    navigateToBreadcrumb,
-    setSelectedIds,
-    setLastSelectedId,
-    clearSelection,
-    moveFile,
-    bulkMoveFiles,
-    bulkCopyFiles,
-    toggleStar,
-    moveToTrash,
-    restoreFile,
-    deleteFilePermanently,
-    createFolder,
-    renameItem,
-    refreshFiles,
-    handleSelection: handleSelectionFromStore,
-  } = useFileStore(state => ({
-    files: state.files,
-    currentFolderId: state.currentFolderId,
-    breadcrumbs: state.breadcrumbs,
-    selectedIds: state.selectedIds,
-    lastSelectedId: state.lastSelectedId,
-    fileStatuses: state.fileStatuses,
-    activeFilter: state.activeFilter,
-    initializeFiles: state.initializeFiles,
-    setActiveFilter: state.setActiveFilter,
-    navigateToFolder: state.navigateToFolder,
-    navigateToBreadcrumb: state.navigateToBreadcrumb,
-    setSelectedIds: state.setSelectedIds,
-    setLastSelectedId: state.setLastSelectedId,
-    clearSelection: state.clearSelection,
-    moveFile: state.moveFile,
-    bulkMoveFiles: state.bulkMoveFiles,
-    bulkCopyFiles: state.bulkCopyFiles,
-    toggleStar: state.toggleStar,
-    moveToTrash: state.moveToTrash,
-    restoreFile: state.restoreFile,
-    deleteFilePermanently: state.deleteFilePermanently,
-    createFolder: state.createFolder,
-    renameItem: state.renameItem,
-    refreshFiles: state.refreshFiles,
-    handleSelection: state.handleSelection,
-  }));
+  const files = useFileStore(state => state.files);
+  const currentFolderId = useFileStore(state => state.currentFolderId);
+  const breadcrumbs = useFileStore(state => state.breadcrumbs);
+  const activeFilter = useFileStore(state => state.activeFilter);
+  const refreshFiles = useFileStore(state => state.refreshFiles);
+  const handleSelectionFromStore = useFileStore(state => state.handleSelection);
+  const initializeFiles = useFileStore(state => state.initializeFiles);
+  const setActiveFilter = useFileStore(state => state.setActiveFilter);
+  const navigateToFolder = useFileStore(state => state.navigateToFolder);
+  const selectedIds = useFileStore(state => state.selectedIds);
+  const navigateToBreadcrumb = useFileStore(state => state.navigateToBreadcrumb);
+  const clearSelection = useFileStore(state => state.clearSelection);
+  const moveFiles = useFileStore(state => state.moveFiles);
+  const copyFiles = useFileStore(state => state.copyFiles);
+  const toggleStar = useFileStore(state => state.toggleStar);
+  const moveToTrash = useFileStore(state => state.moveToTrash);
+  const restoreFile = useFileStore(state => state.restoreFile);
+  const deleteFilePermanently = useFileStore(state => state.deleteFilePermanently);
+  const createFolder = useFileStore(state => state.createFolder);
+  const renameItem = useFileStore(state => state.renameItem);
+  const emptyTrash = useFileStore(state => state.emptyTrash);
+  const fileStatuses = useFileStore(state => state.fileStatuses);
+  const lastSelectedId = useFileStore(state => state.lastSelectedId);
 
   // --- LOCAL UI STATE ---
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -105,6 +87,8 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
   const [activeDragItem, setActiveDragItem] = useState<Active | null>(null);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [recentFiles, setRecentFiles] = useState<Required<DbFile>[] | null>(null);
+  const [isDeleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [isEmptyTrashConfirmOpen, setEmptyTrashConfirmOpen] = useState(false);
 
   // Modal Visibility State
   const [modalMode, setModalMode] = useState<'move' | 'copy' | null>(null);
@@ -135,6 +119,7 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
     return files.some(file => file.id && selectedIds.has(file.id) && file.isFolder);
   }, [files, selectedIds]);
 
+
   // --- EVENT HANDLERS ---
   const handleFileSelect = (fileId: string, event: React.MouseEvent) => {
     event.stopPropagation();
@@ -142,34 +127,49 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
     handleSelectionFromStore(fileId, event.ctrlKey || event.metaKey, event.shiftKey);
   };
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
 
-    try {
-      if (activeFilter === 'trash') {
-        toast.promise(
-          deleteFilePermanently(ids),
-          {
-            loading: `Permanently deleting ${ids.length} item(s)...`,
-            success: 'Items deleted permanently.',
-            error: 'Failed to delete items.',
-          }
-        );
-      } else {
-        toast.promise(
-          moveToTrash(ids),
-          {
-            loading: `Moving ${ids.length} item(s) to trash...`,
-            success: 'Items moved to trash.',
-            error: 'Failed to move items to trash.',
-          }
-        );
-      }
+    if (activeFilter === 'trash') {
+      setDeleteConfirmOpen(true);
+    } else {
+      toast.promise(
+        moveToTrash(ids),
+        {
+          loading: `Moving ${ids.length} item(s) to trash...`,
+          success: 'Items moved to trash.',
+          error: 'Failed to move items to trash.',
+        }
+      );
       clearSelection();
-    } catch (error) {
-      console.error('Bulk delete failed:', error);
     }
+  };
+
+  const handleConfirmPermanentDelete = () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+
+    toast.promise(
+      deleteFilePermanently(ids),
+      {
+        loading: `Permanently deleting ${ids.length} item(s)...`,
+        success: 'Items deleted permanently.',
+        error: 'Failed to delete items.',
+      }
+    );
+    clearSelection();
+  };
+
+  const handleConfirmEmptyTrash = () => {
+    toast.promise(
+      emptyTrash(),
+      {
+        loading: 'Emptying Trash...',
+        success: 'Trash emptied successfully.',
+        error: 'Failed to empty Trash.',
+      }
+    );
   };
 
   const handleBulkRestore = async () => {
@@ -266,30 +266,20 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
   const handleConfirmOperation = async (fileId: string, targetFolderId: string | null) => {
     const idsToProcess = selectedIds.size > 0 ? Array.from(selectedIds) : [fileId];
     const isMove = modalMode === 'move';
-    const actionText = isMove ? 'Moving' : 'Copying';
+    const action = isMove ? moveFiles : copyFiles;
+    const actionText = isMove ? 'move' : 'copy';
 
-    const operationToast = toast.loading(`${actionText} ${idsToProcess.length} item(s)...`);
     handleCloseModal();
 
-    try {
-      if (isMove) {
-        if (idsToProcess.length > 1) {
-          await bulkMoveFiles(idsToProcess, targetFolderId);
-        } else {
-          await moveFile(idsToProcess[0], targetFolderId);
-        }
-      } else {
-        const newFiles = await bulkCopyFiles(idsToProcess, targetFolderId);
-        // Note: bulkCopyFiles in the store should handle updating the files state internally
-        // if the copied files belong to the current folder
+    toast.promise(
+      action(idsToProcess, targetFolderId),
+      {
+        loading: `Processing ${idsToProcess.length} item(s)...`,
+        success: `Items ${actionText}d successfully!`,
+        error: `Failed to ${actionText} items.`
       }
-
-      toast.success(`Items ${isMove ? 'moved' : 'copied'} successfully!`, { id: operationToast });
-      clearSelection();
-    } catch (error) {
-      console.error(`Operation failed: ${actionText}`, error);
-      toast.error(`Failed to ${actionText.toLowerCase()} items.`, { id: operationToast });
-    }
+    );
+    clearSelection();
   };
 
   // Drag and drop handlers
@@ -312,7 +302,7 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
       const targetFolderId = String(over.id);
 
       try {
-        await moveFile(fileIdToMove, targetFolderId);
+        await moveFiles([fileIdToMove], targetFolderId);
       } catch (error) {
         console.error('Drag and drop move failed:', error);
         toast.error('Failed to move item');
@@ -321,67 +311,47 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
   };
 
   // --- EFFECTS ---
-
   useEffect(() => {
     initializeFiles(initialFiles);
-  }, [initialFiles, initializeFiles]);
 
-  // Search effect
+    const fetchData = async () => {
+      try {
+        await new Promise(resolve => setTimeout(resolve, 800));
+        const res = await fetch('/api/files/recent');
+        if (!res.ok) throw new Error('Failed to fetch recent files');
+        const recents: Required<DbFile>[] = await res.json();
+        setRecentFiles(recents);
+        
+      } catch (error) {
+        console.error('Failed to fetch recent files:', error);
+      } finally {
+        setIsInitialLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
   useEffect(() => {
     const searchTimeout = setTimeout(async () => {
       if (searchQuery.length > 1) {
-        setIsSearching(true);
         setSearchResults(null);
         try {
           const response = await fetch(`/api/files/search?q=${searchQuery}`);
-          const data = await response.json();
-          setSearchResults(data);
+          setSearchResults(await response.json());
         } catch (error) {
-          console.error("Failed to fetch search results:", error);
           setSearchResults([]);
-        } finally {
-          setIsSearching(false);
         }
       } else {
         setSearchResults(null);
       }
     }, 400);
-
     return () => clearTimeout(searchTimeout);
   }, [searchQuery]);
 
-  useEffect(() => {
-    const body = window.document.body;
-    if (isDarkMode) {
-      body.classList.add('dark');
-    } else {
-      body.classList.remove('dark');
-    }
-  }, [isDarkMode]);
-
-  // Clear selection when navigation changes
-  useEffect(() => {
-    clearSelection();
-  }, [currentFolderId, activeFilter, clearSelection]);
-
-  // Refresh files when current folder changes
-  useEffect(() => {
-    refreshFiles(currentFolderId);
-  }, [currentFolderId, refreshFiles]);
-
-  // Initial loading and recent files fetch
-  useEffect(() => {
-    const timer = new Promise(resolve => setTimeout(resolve, 800));
-    const dataFetch = fetch('/api/files/recent').then(res => res.json());
-
-    Promise.all([dataFetch, timer]).then(([fetchedRecentFiles]) => {
-      setRecentFiles(fetchedRecentFiles);
-      setIsInitialLoading(false);
-    });
-  }, []);
-
   const isSearchActive = searchQuery.length > 1 && searchResults !== null;
   const isMainContentLoading = isInitialLoading;
+  const hasFiles = filteredFiles.length > 0;
 
   return (
     <div className={`flex h-screen transition-colors duration-200 ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-white text-gray-800'
@@ -407,6 +377,9 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
           setViewMode={setViewMode}
           isDarkMode={isDarkMode}
           setIsDarkMode={setIsDarkMode}
+          activeFilter={activeFilter}
+          onEmptyTrash={() => setEmptyTrashConfirmOpen(true)}
+          disableEmptyTrash={activeFilter === 'trash' && !hasFiles}
         />
 
         <main className="flex-1 overflow-y-auto p-6 max-w-8xl mx-auto w-full">
@@ -450,7 +423,6 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
                 <FileView
                   selectedIds={selectedIds}
                   files={filteredFiles as Required<DbFile>[]}
-                  fileStatuses={fileStatuses}
                   viewMode={viewMode}
                   activeFilter={activeFilter}
                   onToggleStar={handleBulkToggleStar}
@@ -545,12 +517,47 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, userId 
         onClose={() => setFileToPreview(null)}
       />
 
-      <UploadProgressTracker />
-
       <ShareModal
         file={fileToShare}
         onClose={() => setFileToShare(null)}
       />
+
+      <ActivityCenter />
+
+      <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete {selectedIds.size} item(s). This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmPermanentDelete}>
+              Delete Permanently
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={isEmptyTrashConfirmOpen} onOpenChange={setEmptyTrashConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Empty Trash?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete ALL items in your trash.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmEmptyTrash}>
+              Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

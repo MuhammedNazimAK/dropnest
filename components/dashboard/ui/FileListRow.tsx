@@ -8,6 +8,7 @@ import { format } from 'date-fns';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { clsx } from 'clsx';
 import { RenameInput } from './RenameInput';
+import { useFileStore } from '@/lib/store/useFileStore';
 
 
 // Assume DropdownMenu is available
@@ -37,10 +38,9 @@ interface FileListRowProps {
     onRestoreFile: (fileId: string[]) => void;
     onDeletePermanently: (fileId: string[]) => void;
     onShare: (file: Required<FileType>) => void;
-    status?: 'loading';
 }
 
-export const FileListRow: React.FC<FileListRowProps> = ({ renamingId, status, onShare, onStartRename, onConfirmRename, onCancelRename, file, isSelected, onSelect, onMove, onCopy, onDoubleClick, activeFilter, onToggleStar, onMoveToTrash, onDownload, onRestoreFile, onDeletePermanently }) => {
+export const FileListRow: React.FC<FileListRowProps> = ({ renamingId, onShare, onStartRename, onConfirmRename, onCancelRename, file, isSelected, onSelect, onMove, onCopy, onDoubleClick, activeFilter, onToggleStar, onMoveToTrash, onDownload, onRestoreFile, onDeletePermanently }) => {
 
     const {
         attributes,
@@ -52,6 +52,8 @@ export const FileListRow: React.FC<FileListRowProps> = ({ renamingId, status, on
         data: { file },
     });
 
+    const fileStatuses = useFileStore(state => state.fileStatuses);
+    const status = fileStatuses[file.id];
 
     const {
         setNodeRef: droppableRef, // A separate ref for the droppable target

@@ -3,6 +3,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Upload, File, X } from 'lucide-react';
 import { useFileStore } from '@/lib/store/useFileStore';
+import { shallow } from 'zustand/shallow';
 
 interface UploadModalProps {
   isOpen: boolean;
@@ -15,11 +16,9 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const { uploadFiles, currentFolderId, uploadTasks } = useFileStore(state => ({
-    uploadFiles: state.uploadFiles,
-    currentFolderId: state.currentFolderId,
-    uploadTasks: state.uploadTasks,
-  }));
+  const uploadFiles = useFileStore(state => state.uploadFiles);
+  const currentFolderId = useFileStore(state => state.currentFolderId);
+  const uploadTasks = useFileStore(state => state.uploadTasks);
 
   const isUploading = uploadTasks.some(task => task.status === 'uploading' || task.status === 'processing');
 
@@ -70,7 +69,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
 
   if (!isOpen) return null;
 
-  
+
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center" onClick={onClose}>
       <div className="w-full max-w-2xl bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 transform transition-all" onClick={e => e.stopPropagation()}>

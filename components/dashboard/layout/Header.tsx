@@ -7,6 +7,7 @@ import ThemeToggle from '@/components/ui/ThemeToggle';
 import SearchInput from '@/components/ui/SearchInput';
 import { UserButton } from "@clerk/nextjs";
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 
 interface HeaderProps {
   breadcrumbs: { id: string | null; name: string }[];
@@ -17,6 +18,9 @@ interface HeaderProps {
   setViewMode: (mode: 'grid' | 'list') => void;
   isDarkMode: boolean;
   setIsDarkMode: (isDark: boolean) => void;
+  activeFilter: 'all' | 'starred' | 'trash'; // Add this
+  onEmptyTrash: () => void;
+  disableEmptyTrash: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -27,7 +31,10 @@ export const Header: React.FC<HeaderProps> = ({
   viewMode,
   setViewMode,
   isDarkMode,
-  setIsDarkMode
+  setIsDarkMode,
+  activeFilter,
+  onEmptyTrash,
+  disableEmptyTrash
 }) => {
   const { user, isLoaded } = useUser();
 
@@ -55,8 +62,19 @@ export const Header: React.FC<HeaderProps> = ({
         ))}
       </nav>
 
+
       {/* Controls */}
       <div className="flex items-center space-x-2 md:space-x-4">
+        {activeFilter === 'trash' && (
+          <Button 
+            variant="destructive"
+            size="sm"
+            onClick={onEmptyTrash}
+            disabled={disableEmptyTrash}
+          >
+            Empty Trash
+          </Button >
+        )}
         <div className="w-48 md:w-64">
           <SearchInput
             searchQuery={searchQuery}
