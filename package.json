@@ -19,6 +19,7 @@
     "@heroui/button": "^2.2.23",
     "@heroui/card": "^2.2.20",
     "@heroui/input": "^2.4.24",
+    "@heroui/modal": "^2.2.23",
     "@heroui/system": "^2.4.20",
     "@heroui/theme": "^2.4.17",
     "@hookform/resolvers": "^5.1.1",

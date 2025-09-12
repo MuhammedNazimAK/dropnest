@@ -2,20 +2,29 @@
 
 import { useForm } from "react-hook-form"
 import { useSignUp } from "@clerk/nextjs"
-import React, { useState } from "react"
+import React, { Dispatch, SetStateAction, useState } from "react"
 import Link from "next/link";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner"
 
 //zod custom schema
 import { signUpSchema } from "@/schemas/signUpSchema"
-
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useRouter } from "next/navigation"
 import { z } from "zod";
 
+interface SignUpFormProps {
+  isModal?: boolean;
+  onClose?: () => void;
+  setShowModal: Dispatch<SetStateAction<ModalState>>;
+}
 
-export default function SignUpForm() {
+type ModalState = {
+  type: 'signin' | 'signup' | null;
+  isOpen: boolean;
+};
+
+export default function SignUpForm({ isModal = false, onClose, setShowModal }: SignUpFormProps) {
   const router = useRouter();
   const [verifying, setVerifying] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -31,7 +40,6 @@ export default function SignUpForm() {
     register,
     handleSubmit,
     formState: { errors },
-
   } = useForm<z.infer<typeof signUpSchema>>({
     resolver: zodResolver(signUpSchema),
     defaultValues: {
@@ -58,19 +66,18 @@ export default function SignUpForm() {
     } catch (error: unknown) {
       if (error instanceof Error)
         setAuthError(
-          error.message || "An error occured during the signup. please try again"
+          error.message || "An error occurred during signup. Please try again"
         )
     } finally {
       setIsSubmitting(false)
     }
   };
 
-
   const handleVerificationSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!isLoaded || !signUp) return;
     setIsSubmitting(true);
-    setAuthError(null);
+    setVerificationError(null);
 
     try {
       const result = await signUp.attemptEmailAddressVerification({
@@ -83,16 +90,12 @@ export default function SignUpForm() {
         })
         router.push("/dashboard")
       } else {
-        console.error("Verification incomplete", result);
-        setVerificationError(
-          "verification could not be complete"
-        )
+        setVerificationError("Verification could not be completed")
       }
-
     } catch (error: unknown) {
       if (error instanceof Error)
         setVerificationError(
-          error.message || "An error occured during the signup. please try again"
+          error.message || "An error occurred during verification. Please try again"
         )
     } finally {
       setIsSubmitting(false);
@@ -101,36 +104,35 @@ export default function SignUpForm() {
 
   if (verifying) {
     return (
-      <div className="w-full max-w-sm mx-auto">
-        {/* Card/Box Container */}
-        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-8 shadow-sm">
+      <div className={isModal ? "w-full" : "w-full max-w-sm mx-auto"}>
+        <div className={`bg-white border border-gray-200 rounded-2xl shadow-sm ${isModal ? 'p-6' : 'p-8'}`}>
           {/* Header Section */}
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-light text-gray-900 dark:text-white mb-2 tracking-tight">
+          <div className="text-center mb-6">
+            <h1 className={`font-light text-gray-900 mb-2 tracking-tight ${isModal ? 'text-2xl' : 'text-3xl'}`}>
               Verify Your Email
             </h1>
-            <p className="text-gray-500 dark:text-gray-400 font-light">
+            <p className="text-gray-500 font-light text-sm">
               Enter the code sent to your email address
             </p>
           </div>
 
           {/* Error Alert */}
           {verificationError && (
-            <div className="mb-6 p-4 rounded-lg border border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950">
-              <p className="text-sm text-red-600 dark:text-red-400">{verificationError}</p>
+            <div className="mb-4 p-3 rounded-lg border border-red-200 bg-red-50">
+              <p className="text-sm text-red-600">{verificationError}</p>
             </div>
           )}
 
           {/* Form */}
-          <form onSubmit={handleVerificationSubmit} className="space-y-3">
+          <form onSubmit={handleVerificationSubmit} className="space-y-4">
             {/* Verification Code Field */}
             <div className="space-y-2">
-              <label htmlFor="verificationCode" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label htmlFor="verificationCode" className="block text-sm font-medium text-gray-700">
                 Verification Code
               </label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-4 w-4 text-gray-400 group-focus-within:text-gray-600 dark:group-focus-within:text-gray-300 transition-colors duration-200" />
+                  <Mail className="h-4 w-4 text-gray-400 group-focus-within:text-gray-600 transition-colors duration-200" />
                 </div>
                 <input
                   id="verificationCode"
@@ -138,7 +140,7 @@ export default function SignUpForm() {
                   value={verificationCode}
                   onChange={(e) => setVerificationCode(e.target.value)}
                   placeholder="Enter 6-digit code"
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white focus:border-transparent transition-all duration-200 text-sm text-center tracking-[0.2em]"
+                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all duration-200 text-sm text-center tracking-[0.2em]"
                 />
               </div>
             </div>
@@ -147,7 +149,11 @@ export default function SignUpForm() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-3 px-4 bg-black dark:bg-white text-white dark:text-black font-medium rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black dark:focus:ring-white text-sm"
+              className={`w-full py-3 px-4 font-medium rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 text-sm ${
+                isModal 
+                  ? 'bg-gradient-to-r from-blue-500 to-gray-700 text-white focus:ring-blue-500' 
+                  : 'bg-black text-white focus:ring-black'
+              }`}
             >
               {isSubmitting ? (
                 <div className="flex items-center justify-center">
@@ -164,12 +170,12 @@ export default function SignUpForm() {
           </form>
 
           {/* Footer */}
-          <div className="mt-8 text-center">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600">
               Didn't receive the code?{" "}
               <button
                 type="button"
-                className="font-medium text-black dark:text-white underline underline-offset-2 decoration-1 disabled:opacity-50"
+                className="font-medium text-black underline underline-offset-2 decoration-1"
                 onClick={async () => {
                   try {
                     await signUp?.prepareEmailAddressVerification({ strategy: "email_code" });
@@ -189,64 +195,64 @@ export default function SignUpForm() {
   }
 
   return (
-    <div className="w-full max-w-sm mx-auto">
+    <div className={isModal ? "w-[400px] mx-auto" : "max-w-sm mx-auto"}>
       {/* Card/Box Container */}
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-8 shadow-sm">
+      <div className={`bg-white border border-gray-200 rounded-2xl shadow-sm ${isModal ? 'p-6' : 'p-8'}`}>
         {/* Header Section */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-light text-gray-900 dark:text-white mb-2 tracking-tight">
-            Create Your Account
+        <div className="text-center mb-6">
+          <h1 className={`font-light text-gray-900 mb-2 tracking-tight ${isModal ? 'text-2xl' : 'text-3xl'}`}>
+            {isModal ? 'Create Account' : 'Create Your Account'}
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 font-light">
-            Get started with your secure cloud storage
+          <p className="text-gray-500 font-light text-sm">
+            {isModal ? 'Join to access all features' : 'Get started with your secure cloud storage'}
           </p>
         </div>
 
         {/* Error Alert */}
         {authError && (
-          <div className="mb-6 p-4 rounded-lg border border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950">
-            <p className="text-sm text-red-600 dark:text-red-400">{authError}</p>
+          <div className="mb-4 p-3 rounded-lg border border-red-200 bg-red-50">
+            <p className="text-sm text-red-600">{authError}</p>
           </div>
         )}
 
         {/* Form */}
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Email Field */}
           <div className="space-y-2">
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
               Email address
             </label>
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Mail className="h-4 w-4 text-gray-400 group-focus-within:text-gray-600 dark:group-focus-within:text-gray-300 transition-colors duration-200" />
+                <Mail className="h-4 w-4 text-gray-400 group-focus-within:text-gray-600 transition-colors duration-200" />
               </div>
               <input
                 id="email"
                 type="email"
                 placeholder="Enter your email address"
-                className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white focus:border-transparent transition-all duration-200 text-sm"
+                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all duration-200 text-sm"
                 {...register("email")}
               />
             </div>
-            <p className="text-xs h-4 text-red-600 dark:text-red-400 mt-1">
+            <p className="text-xs h-4 text-red-600 mt-1">
               {errors.email?.message}
             </p>
           </div>
 
           {/* Password Field */}
           <div className="space-y-2">
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
               Password
             </label>
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Lock className="h-4 w-4 text-gray-400 group-focus-within:text-gray-600 dark:group-focus-within:text-gray-300 transition-colors duration-200" />
+                <Lock className="h-4 w-4 text-gray-400 group-focus-within:text-gray-600 transition-colors duration-200" />
               </div>
               <input
                 id="password"
                 type={showPassword ? "text" : "password"}
                 placeholder="Enter your password"
-                className="block w-full pl-10 pr-10 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white focus:border-transparent transition-all duration-200 text-sm"
+                className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all duration-200 text-sm"
                 {...register("password")}
               />
               <button
@@ -261,25 +267,25 @@ export default function SignUpForm() {
                 )}
               </button>
             </div>
-            <p className="text-xs h-4 text-red-600 dark:text-red-400 mt-1">
+            <p className="text-xs h-4 text-red-600 mt-1">
               {errors.password?.message}
             </p>
           </div>
 
           {/* Password Confirmation Field */}
           <div className="space-y-2">
-            <label htmlFor="passwordConfirmation" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label htmlFor="passwordConfirmation" className="block text-sm font-medium text-gray-700">
               Confirm password
             </label>
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Lock className="h-4 w-4 text-gray-400 group-focus-within:text-gray-600 dark:group-focus-within:text-gray-300 transition-colors duration-200" />
+                <Lock className="h-4 w-4 text-gray-400 group-focus-within:text-gray-600 transition-colors duration-200" />
               </div>
               <input
                 id="passwordConfirmation"
                 type={showPasswordConfirmation ? "text" : "password"}
                 placeholder="Confirm your password"
-                className="block w-full pl-10 pr-10 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white focus:border-transparent transition-all duration-200 text-sm"
+                className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all duration-200 text-sm"
                 {...register("passwordConfirmation")}
               />
               <button
@@ -294,7 +300,7 @@ export default function SignUpForm() {
                 )}
               </button>
             </div>
-            <p className="text-xs h-4 text-red-600 dark:text-red-400 mt-1">
+            <p className="text-xs h-4 text-red-600 mt-1">
               {errors.passwordConfirmation?.message}
             </p>
           </div>
@@ -303,7 +309,11 @@ export default function SignUpForm() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full py-3 px-4 bg-black dark:bg-white text-white dark:text-black font-medium rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black dark:focus:ring-white text-sm"
+            className={`w-full py-3 px-4 font-medium rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 text-sm ${
+              isModal 
+                ? 'bg-gradient-to-r from-blue-500 to-gray-700 text-white focus:ring-blue-500' 
+                : 'bg-black text-white focus:ring-black'
+            }`}
           >
             {isSubmitting ? (
               <div className="flex items-center justify-center">
@@ -314,23 +324,39 @@ export default function SignUpForm() {
                 Creating Account...
               </div>
             ) : (
-              "Create Account"
+              isModal ? "Create Account" : "Create Account"
             )}
           </button>
         </form>
 
         {/* Footer */}
-        <div className="mt-8 text-center">
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Already have an account?{" "}
-            <Link
-              href="/sign-in"
-              className="font-medium text-black dark:text-white underline underline-offset-2 decoration-1"
-            >
-              Sign in
-            </Link>
-          </p>
-        </div>
+        {!isModal && (
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600">
+              Already have an account?{" "}
+              <Link
+                href="/sign-in"
+                className="font-medium text-black underline underline-offset-2 decoration-1"
+              >
+                Sign in
+              </Link>
+            </p>
+          </div>
+        )}
+
+        {/* Modal Footer */}
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600">
+              Already have an account?{" "}
+              <button
+                type="button"
+                onClick={() => setShowModal({ type: 'signin', isOpen: true })}
+                className="font-medium text-blue-600 underline underline-offset-2 decoration-1"
+              >
+                Sign in instead
+              </button>
+            </p>
+          </div>
       </div>
     </div>
   );

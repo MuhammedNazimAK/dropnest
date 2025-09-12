@@ -2,22 +2,25 @@
 
 import { signInSchema } from "@/schemas/signInSchema"
 import { useSignIn } from "@clerk/nextjs"
-
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { Dispatch, SetStateAction, useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
-
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-
-import { Card, CardBody, CardHeader, CardFooter } from "@heroui/card"
-import { Input } from "@heroui/input"
-import { Button } from "@heroui/button"
-import Link from "next/link";
-import { Alert } from "@heroui/alert";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 
-export default function SignInForm() {
+interface SignInFormProps {
+  onClose?: () => void;
+  isModal?: boolean;
+  setShowModal: Dispatch<SetStateAction<ModalState>>;
+}
+
+type ModalState = {
+  type: 'signin' | 'signup' | null;
+  isOpen: boolean;
+};
+
+export default function SignInForm({ onClose, isModal = false, setShowModal }: SignInFormProps) {
   const router = useRouter();
   const { signIn, isLoaded, setActive } = useSignIn();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -27,7 +30,8 @@ export default function SignInForm() {
   const {
     register,
     handleSubmit,
-    formState: { errors }
+    formState: { errors },
+    setValue
   } = useForm<z.infer<typeof signInSchema>>({
     resolver: zodResolver(signInSchema),
     defaultValues: {
@@ -49,6 +53,10 @@ export default function SignInForm() {
 
       if (result.status === "complete") {
         await setActive({ session: result.createdSessionId })
+        // Close modal if it exists before navigating
+        if (onClose) {
+          onClose();
+        }
         router.push("/dashboard")
       } else {
         setAuthError("Sign in error")
@@ -66,65 +74,75 @@ export default function SignInForm() {
     }
   }
 
-  return (
-    <div className="w-full max-w-sm mx-auto">
+  useEffect(() => {
+  const handleFillDemo = () => {
+    setValue("identifier", "demo@dropnest.com");
+    setValue("password", "demo123");
+  };
+
+  window.addEventListener('fillDemo', handleFillDemo);
+  return () => window.removeEventListener('fillDemo', handleFillDemo);
+}, [setValue]);
+
+return (
+    <div className={isModal ? "w-[400px] mx-auto" : "w-full max-w-sm mx-auto"}>
       {/* Card/Box Container */}
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-8 shadow-sm">
+      <div className={`bg-white border border-gray-200 rounded-2xl shadow-sm ${isModal ? 'p-6' : 'p-8'}`}>
         {/* Header Section */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-light text-gray-900 dark:text-white mb-2 tracking-tight">
-            Welcome back
+        <div className="text-center mb-6">
+          <h1 className={`font-light text-gray-900 mb-2 tracking-tight ${isModal ? 'text-2xl' : 'text-3xl'}`}>
+            {isModal ? 'Sign In' : 'Welcome back'}
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 font-light">
-            Sign in to your account
+          <p className="text-gray-500 font-light text-sm">
+            {isModal ? 'Access your account or try the demo' : 'Sign in to your account'}
           </p>
         </div>
 
         {/* Error Alert */}
         {authError && (
-          <div className="mb-6 p-4 rounded-lg border border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950">
-            <p className="text-sm text-red-600 dark:text-red-400">{authError}</p>
+          <div className="mb-4 p-3 rounded-lg border border-red-200 bg-red-50">
+            <p className="text-sm text-red-600">{authError}</p>
           </div>
         )}
 
         {/* Form */}
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Email/Username Field */}
           <div className="space-y-2">
-            <label htmlFor="identifier" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label htmlFor="identifier" className="block text-sm font-medium text-gray-700">
               Email or username
             </label>
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Mail className="h-4 w-4 text-gray-400 group-focus-within:text-gray-600 dark:group-focus-within:text-gray-300 transition-colors duration-200" />
+                <Mail className="h-4 w-4 text-gray-400 group-focus-within:text-gray-600 transition-colors duration-200" />
               </div>
               <input
                 id="identifier"
                 type="text"
                 placeholder="Enter your email or username"
-                className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white focus:border-transparent transition-all duration-200 text-sm"
+                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all duration-200 text-sm"
                 {...register("identifier")}
               />
             </div>
-            <p className="text-xs h-4 text-red-600 dark:text-red-400 mt-1">
+            <p className="text-xs h-4 text-red-600 mt-1">
               {errors.identifier?.message}
             </p>
           </div>
 
           {/* Password Field */}
           <div className="space-y-2">
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
               Password
             </label>
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Lock className="h-4 w-4 text-gray-400 group-focus-within:text-gray-600 dark:group-focus-within:text-gray-300 transition-colors duration-200" />
+                <Lock className="h-4 w-4 text-gray-400 group-focus-within:text-gray-600 transition-colors duration-200" />
               </div>
               <input
                 id="password"
                 type={showPassword ? "text" : "password"}
                 placeholder="Enter your password"
-                className="block w-full pl-10 pr-10 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white focus:border-transparent transition-all duration-200 text-sm"
+                className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all duration-200 text-sm"
                 {...register("password")}
               />
               <button
@@ -139,7 +157,7 @@ export default function SignInForm() {
                 )}
               </button>
             </div>
-            <p className="text-xs h-4 text-red-600 dark:text-red-400 mt-1">
+            <p className="text-xs h-4 text-red-600 mt-1">
               {errors.password?.message}
             </p>
           </div>
@@ -148,7 +166,11 @@ export default function SignInForm() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full py-3 px-4 bg-black dark:bg-white text-white dark:text-black font-medium rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black dark:focus:ring-white text-sm"
+            className={`w-full py-3 px-4 font-medium rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 text-sm ${
+              isModal 
+                ? 'bg-gradient-to-r from-blue-500 to-gray-700 text-white focus:ring-blue-500' 
+                : 'bg-black text-white focus:ring-black'
+            }`}
           >
             {isSubmitting ? (
               <div className="flex items-center justify-center">
@@ -165,17 +187,33 @@ export default function SignInForm() {
         </form>
 
         {/* Footer */}
-        <div className="mt-8 text-center">
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Don't have an account?{" "}
-            <Link
-              href="/sign-up"
-              className="font-medium text-black dark:text-white underline underline-offset-2 decoration-1"
-            >
-              Sign up
-            </Link>
-          </p>
-        </div>
+        {!isModal && (
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600">
+              Don't have an account?{" "}
+              <a
+                href="/sign-up"
+                className="font-medium text-black underline underline-offset-2 decoration-1"
+              >
+                Sign up
+              </a>
+            </p>
+          </div>
+        )}
+
+        {/* Modal Footer */}
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600">
+              Need a fresh account?{" "}
+              <button
+                type="button"
+                onClick={() => setShowModal({ type: 'signup', isOpen: true })}
+                className="font-medium text-blue-600 underline underline-offset-2 decoration-1"
+              >
+                Create account instead
+              </button>
+            </p>
+          </div>
       </div>
     </div>
   );

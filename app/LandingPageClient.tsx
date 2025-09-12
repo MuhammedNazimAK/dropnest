@@ -1,65 +1,40 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
-import { Cloud, Upload } from 'lucide-react';
+import React, { useState } from 'react';
+import { Cloud, Upload, Search, FolderOpen, Eye, Star, File } from 'lucide-react';
 import { Button } from '@heroui/button';
 import { Card, CardBody } from '@heroui/card';
-import { Variants, motion, AnimatePresence } from 'framer-motion';
+import { Variants, AnimatePresence, motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import { Modal, ModalContent, ModalBody } from '@heroui/modal';
+import SignInForm from '@/components/SignInForm';
+import SignUpForm from '@/components/SignUpForm';
+
+
+type ModalState = {
+  type: 'signin' | 'signup' | null;
+  isOpen: boolean;
+};
 
 const DropNestLanding = () => {
-  const [isDragOver, setIsDragOver] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [isUploading, setIsUploading] = useState(false);
-  
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [activeFeature, setActiveFeature] = useState(0);
+  const [showModal, setShowModal] = useState<ModalState>({ type: null, isOpen: false });
+  const [copied, setCopied] = useState(false);
+
   const router = useRouter();
-  
-  const handleCardClick = () => {
-    fileInputRef.current?.click();
+
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1000);
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  const files = e.target.files;
-  if (files && files.length > 0) {
-    // Replace this with your real upload logic later
-    simulateUpload();
-  }
-}
-
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragOver(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragOver(false);
-  };
-
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragOver(false);
-    simulateUpload();
-  };
-
-  const simulateUpload = () => {
-    setIsUploading(true);
-    setUploadProgress(0);
-    const interval = setInterval(() => {
-      setUploadProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setTimeout(() => {
-            setIsUploading(false);
-            setUploadProgress(0);
-          }, 1000);
-          return 100;
-        }
-        return prev + 10;
-      });
-    }, 150);
-  };
+  const features = [
+    { icon: Upload, text: "Drag & drop upload" },
+    { icon: Search, text: "Instant search" },
+    { icon: Eye, text: "Rich previews" },
+    { icon: FolderOpen, text: "Smart organization" }
+  ];
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -84,34 +59,60 @@ const DropNestLanding = () => {
     }
   };
 
-  const floatingVariants: Variants = {
+  const mockupVariants: Variants = {
     animate: {
-      y: [-10, 10, -10],
-      rotate: [0, 5, -5, 0],
       transition: {
-        duration: 6,
+        staggerChildren: 0.3,
         repeat: Infinity,
-        ease: "easeInOut"
+        repeatDelay: 2
       }
     }
   };
+
+  const fileVariants: Variants = {
+    animate: {
+      scale: [1, 1.05, 1],
+      opacity: [0.7, 1, 0.7],
+      transition: {
+        duration: 2,
+        repeat: Infinity,
+        repeatDelay: 1
+      }
+    }
+  };
+
+  // Cycling feature animation
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveFeature(prev => (prev + 1) % features.length);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const techStack = [
+    { name: "Next.js", color: "from-black to-gray-700" },
+    { name: "Drizzle", color: "from-green-500 to-green-700" },
+    { name: "Zustand", color: "from-orange-500 to-red-600" },
+    { name: "Neon", color: "from-cyan-400 to-blue-600" },
+    { name: "Clerk", color: "from-purple-500 to-indigo-600" }
+  ];
 
   return (
     <div className="min-h-screen bg-white text-black overflow-hidden">
 
       {/* Navigation */}
-      <motion.nav 
+      <motion.nav
         className="relative z-10 px-6 py-4"
         initial={{ y: -50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.8 }}
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <motion.div 
+          <motion.div
             className="flex items-center space-x-2 cursor-pointer"
             whileHover={{ scale: 1.05 }}
           >
-            <motion.div 
+            <motion.div
               className="w-8 h-8 bg-gradient-to-r from-blue-500 to-gray-700 rounded-lg flex items-center justify-center cursor-pointer"
               whileHover={{ rotate: 360 }}
               transition={{ duration: 0.6 }}
@@ -122,148 +123,203 @@ const DropNestLanding = () => {
               DropNest
             </span>
           </motion.div>
-          <div className="hidden md:flex items-center space-x-8">
-            <motion.a 
-              className="hover:text-blue-600 transition-colors cursor-pointer"
-              whileHover={{ y: -2 }}
-              onClick={() => router.push('/sign-in')}
-            >
-              Sign In
-            </motion.a>
-            <motion.a 
-              className="hover:text-blue-600 transition-colors cursor-pointer"
-              whileHover={{ y: -2 }}
-            >
-              About
-            </motion.a>
+          <div className="hidden md:flex items-center space-x-4">
             <Button
-              className="bg-black text-white font-semibold hover:bg-gray-800 cursor-pointer"
+              className="bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200 border border-gray-300 transition-all duration-200"
               size="md"
               radius="full"
-              onClick={() => router.push('/sign-up')}
+              onClick={() => setShowModal({ type: 'signup', isOpen: true })}
             >
               Get Started
+            </Button>
+            <Button
+              className="bg-gradient-to-r from-blue-500 to-gray-700 text-white font-semibold hover:shadow-lg hover:scale-102 transition-all duration-200"
+              size="md"
+              radius="full"
+              onClick={() => setShowModal({ type: 'signin', isOpen: true })}
+            >
+              Try Demo
             </Button>
           </div>
         </div>
       </motion.nav>
 
-        {/* Hero Section */}
-        <motion.section 
-          className="relative z-10 px-6 py-20"
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-        >
-          <div className="max-w-7xl mx-auto text-center">
-            <motion.div 
-              className="mb-8"
-              variants={itemVariants}
-            >
-              <motion.h1 
-                className="text-6xl md:text-8xl font-bold mb-6 text-black"
-              animate={{ 
+      {/* Hero Section */}
+      <motion.section
+        className="relative z-10 px-6 py-20"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <div className="max-w-7xl mx-auto text-center">
+          <motion.div
+            className="mb-8"
+            variants={itemVariants}
+          >
+            <motion.h1
+              className="text-6xl md:text-8xl font-bold mb-6 text-black"
+              animate={{
                 backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
               }}
               transition={{ duration: 3, repeat: Infinity }}
             >
-              DropNest
+              Experience a Modern<br />File Cloud.
+              <motion.span
+                className="text-transparent bg-gradient-to-r from-blue-500 to-gray-700 bg-clip-text"
+                animate={{ opacity: [0.7, 1, 0.7] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              >
+                Instantly.
+              </motion.span>
             </motion.h1>
-            <motion.p 
-              className="text-xl md:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto"
+            <motion.p
+              className="text-xl md:text-2xl text-gray-600 mb-12 max-w-3xl mx-auto"
               variants={itemVariants}
             >
-              Your files deserve a beautiful home. Store, sync, and share with the elegance your data deserves.
+              Skip the setup. Jump straight into a fully-featured file management experience that showcases what modern cloud storage should feel like.
             </motion.p>
           </motion.div>
 
-          {/* Interactive Upload Demo */}
-          <motion.div 
-            className="max-w-2xl mx-auto mb-12 flex justify-center"
+          {/* Interactive Dashboard Preview */}
+          <motion.div
+            className="max-w-4xl mx-auto mb-12"
             variants={itemVariants}
           >
-
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              className="hidden"
-              multiple
-            />
-
-            <Card
-              onClick={handleCardClick}
-              className={`bg-gray-50 border-2 border-gray-200 transition-all duration-300 cursor-pointer ${
-                isDragOver ? 'border-blue-500 bg-blue-50 scale-105' : ''
-              } ${isUploading ? 'border-gray-400 bg-gray-100' : ''}`}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              isPressable
-              onPress={simulateUpload}
-            >
-              <CardBody className="p-12 min-h-[300px] overflow-hidden">
-                <AnimatePresence mode="wait">
-                  {isUploading ? (
-                    <motion.div 
-                      key="uploading"
-                      className="space-y-4"
-                      initial={{ opacity: 0, scale: 1 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 1 }}
+            <Card className="bg-gray-50 border-2 border-gray-200 overflow-hidden">
+              <CardBody className="p-8">
+                <motion.div
+                  className="space-y-6"
+                  variants={mockupVariants}
+                  animate="animate"
+                >
+                  {/* Mock Search Bar */}
+                  <motion.div
+                    className="flex items-center bg-white rounded-lg p-3 border border-gray-300 max-w-md mx-auto"
+                    whileHover={{ scale: 1.02 }}
+                  >
+                    <Search className="w-4 h-4 text-gray-400 mr-3" />
+                    <motion.div
+                      className="text-gray-500 text-left flex-1"
+                      animate={{ opacity: [0.5, 1, 0.5] }}
+                      transition={{ duration: 2, repeat: Infinity }}
                     >
-                      <motion.div 
-                        className="w-16 h-16 mx-auto bg-gradient-to-r from-blue-500 to-gray-700 rounded-full flex items-center justify-center"
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                      >
-                        <Upload className="w-8 h-8 text-white" />
-                      </motion.div>
-                      <div className="w-full bg-gray-300 rounded-full h-2 overflow-hidden">
-                        <motion.div 
-                          className="bg-gradient-to-r from-blue-500 to-gray-700 h-2 rounded-full"
-                          initial={{ width: 0 }}
-                          animate={{ width: `${uploadProgress}%` }}
-                          transition={{ duration: 0.3 }}
-                        />
-                      </div>
-                      <p className="text-lg text-black w-[180px]">Uploading... {uploadProgress}%</p>
+                      Search files...
                     </motion.div>
-                  ) : (
-                    <motion.div 
-                      key="upload"
-                      className="space-y-4"
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.8 }}
-                    >
-                      <motion.div 
-                        className="w-16 h-16 mx-auto bg-gradient-to-r from-blue-500 to-gray-700 rounded-full flex items-center justify-center cursor-pointer"
-                        whileHover={{ scale: 1.1, rotate: 5 }}
-                        variants={floatingVariants}
+                  </motion.div>
+
+                  {/* Mock File Grid */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {[
+                      { name: "Project.pdf", starred: true, type: "pdf" },
+                      { name: "Design.png", starred: false, type: "image" },
+                      { name: "Video.mp4", starred: false, type: "video" },
+                      { name: "Notes.md", starred: true, type: "text" }
+                    ].map((file, index) => (
+                      <motion.div
+                        key={file.name}
+                        className="bg-white rounded-lg p-4 border border-gray-200 relative"
+                        variants={fileVariants}
                         animate="animate"
+                        style={{ animationDelay: `${index * 0.5}s` }}
+                        whileHover={{ scale: 1.05, y: -2 }}
                       >
-                        <Upload className="w-8 h-8 text-white" />
+                        <div className="flex flex-col items-center space-y-2">
+                          <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-gray-700 rounded flex items-center justify-center">
+                            <File className="w-4 h-4 text-white" />
+                          </div>
+                          <span className="text-xs text-gray-600 text-center">{file.name}</span>
+                          {file.starred && (
+                            <motion.div
+                              className="absolute top-2 right-2"
+                              animate={{ rotate: [0, 360], scale: [1, 1.2, 1] }}
+                              transition={{ duration: 1, repeat: Infinity, repeatDelay: 2 }}
+                            >
+                              <Star className="w-3 h-3 text-yellow-500 fill-current" />
+                            </motion.div>
+                          )}
+                        </div>
                       </motion.div>
-                      <p className="text-xl font-semibold text-black">Drop files here or click to upload</p>
-                      <p className="text-gray-500">Experience the magic of seamless file storage</p>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                    ))}
+                  </div>
+
+                  {/* Animated Feature Showcase */}
+                  <motion.div
+                    className="flex justify-center items-center space-x-8 pt-4"
+                  >
+                    {features.map((feature, index) => {
+                      const Icon = feature.icon;
+                      const isActive = index === activeFeature;
+                      return (
+                        <motion.div
+                          key={index}
+                          className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-300 ${isActive ? 'bg-gradient-to-r from-blue-500 to-gray-700 text-white' : 'text-gray-500'
+                            }`}
+                          animate={{
+                            scale: isActive ? 1.1 : 1,
+                            opacity: isActive ? 1 : 0.6
+                          }}
+                        >
+                          <Icon className="w-4 h-4" />
+                          <span className="text-sm font-medium hidden md:block">{feature.text}</span>
+                        </motion.div>
+                      );
+                    })}
+                  </motion.div>
+                </motion.div>
               </CardBody>
             </Card>
           </motion.div>
 
-          <motion.div 
-            className="flex flex-col sm:flex-row gap-4 justify-center items-center"
+          {/* CTA Section */}
+          <motion.div
+            className="flex flex-col items-center space-y-6"
             variants={itemVariants}
           >
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Button
+                className="bg-gradient-to-r from-blue-500 to-gray-700 text-white font-semibold text-lg px-12 py-4 hover:shadow-xl transition-all duration-300"
+                size="lg"
+                radius="full"
+                onClick={() => setShowModal({ type: 'signin', isOpen: true })}
+              >
+                View Live Demo
+              </Button>
+            </motion.div>
+            <p className="text-sm text-gray-500">
+              No signup required • Pre-populated account ready
+            </p>
+          </motion.div>
+
+          {/* Tech Stack Credibility Bar */}
+          <motion.div
+            className="mt-16 pt-8 border-t border-gray-200"
+            variants={itemVariants}
+          >
+            <p className="text-sm text-gray-500 mb-6">Built with modern technologies:</p>
+            <div className="flex flex-wrap justify-center items-center gap-6">
+              {techStack.map((tech, index) => (
+                <motion.div
+                  key={tech.name}
+                  className="flex items-center space-x-2"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  whileHover={{ scale: 1.1 }}
+                >
+                  <div className={`w-3 h-3 rounded-full bg-gradient-to-r ${tech.color}`} />
+                  <span className="text-sm font-medium text-gray-700">{tech.name}</span>
+                </motion.div>
+              ))}
+            </div>
           </motion.div>
         </div>
       </motion.section>
 
       {/* Footer */}
-      <motion.footer 
+      <motion.footer
         className="relative z-10 px-6 py-12 border-t border-gray-200"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
@@ -271,11 +327,11 @@ const DropNestLanding = () => {
         viewport={{ once: true }}
       >
         <div className="max-w-7xl mx-auto text-center">
-          <motion.div 
+          <motion.div
             className="flex items-center justify-center space-x-2 mb-4 cursor-pointer"
             whileHover={{ scale: 1.05 }}
           >
-            <motion.div 
+            <motion.div
               className="w-6 h-6 bg-gradient-to-r from-blue-500 to-gray-700 rounded-lg flex items-center justify-center"
               whileHover={{ rotate: 360 }}
               transition={{ duration: 0.6 }}
@@ -291,6 +347,138 @@ const DropNestLanding = () => {
           </p>
         </div>
       </motion.footer>
+
+      <Modal
+        isOpen={showModal.isOpen}
+        onClose={() => setShowModal({ type: null, isOpen: false })}
+        placement="center"
+        backdrop="blur"
+        size="4xl"
+        classNames={{
+          backdrop: "bg-black/60 backdrop-blur-sm",
+          base: "bg-transparent shadow-none max-w-4xl",
+          body: "p-0"
+        }}
+      >
+        <ModalContent className="bg-transparent shadow-none">
+          <ModalBody className="p-0 flex justify-center relative">
+            {/* ---------------- Sign In / Sign Up Forms ---------------- */}
+            <AnimatePresence mode="wait">
+              {showModal.type === "signin" && (
+                <motion.div
+                  key="signin"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.25 }}
+                  className="relative z-10"
+                >
+                  <SignInForm
+                    isModal
+                    onClose={() => setShowModal({ type: null, isOpen: false })}
+                    setShowModal={setShowModal}
+                  />
+                </motion.div>
+              )}
+
+              {showModal.type === "signup" && (
+                <motion.div
+                  key="signup"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.25 }}
+                  className="relative z-10"
+                >
+                  <SignUpForm
+                    isModal
+                    onClose={() => setShowModal({ type: null, isOpen: false })}
+                    setShowModal={setShowModal}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </ModalBody>
+        </ModalContent>
+      </Modal>
+
+      {/* ---------------- Demo Credentials Panel (Outside Modal) ---------------- */}
+        {showModal.type === "signin" && (
+          <motion.div
+            key="demo-panel"
+            className="fixed top-1/2 right-4 transform -translate-y-1/2 w-72 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-5 shadow-lg z-[60]"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            transition={{ delay: 0.2, type: "spring" }}
+          >
+            <div className="text-center mb-4">
+              <motion.div
+                className="text-3xl mb-2"
+                animate={{ rotate: [0, 10, -10, 0] }}
+                transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+              />
+              <h3 className="font-semibold text-gray-900 text-lg">Demo Credentials</h3>
+              <p className="text-xs text-gray-600 mt-1">Instant access to full experience</p>
+            </div>
+
+            <div className="space-y-3">
+              <motion.div className="bg-white rounded-lg p-3 border border-gray-200 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Email</p>
+                    <p className="text-sm font-mono text-gray-800">demo@dropnest.com</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleCopy("demo@dropnest.com")}
+                    className="text-xs cursor-pointer bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 transition-colors"
+                  >
+                    Copy
+                  </button>
+                </div>
+              </motion.div>
+
+              <motion.div className="bg-white rounded-lg p-3 border border-gray-200 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Password</p>
+                    <p className="text-sm font-mono text-gray-800">demo123</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleCopy("demo123")}
+                    className="text-xs cursor-pointer bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 transition-colors"
+                  >
+                    Copy
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+
+            <motion.div
+              className="mt-4 text-center"
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
+            >
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent("fillDemo"))}
+                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-sm"
+              >
+                Auto-fill Credentials
+              </button>
+            </motion.div>
+
+            <div className="mt-4 text-center">
+              <p className="text-xs text-gray-500">Pre-populated with files, folders, and activity</p>
+            </div>
+
+            {copied && (
+              <span className="absolute top-2 right-2 text-green-600 text-xs font-medium">Copied!</span>
+            )}
+          </motion.div>
+        )}
     </div>
   );
 };
