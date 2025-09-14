@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import ImageKit from "imagekit";
 import { NextResponse, NextRequest } from "next/server";
 import { copyFilesService } from "@/lib/services/file.service";
+import { getErrorMessage } from "@/utils/errorHandler";
 
 const imageKit = new ImageKit({
     publicKey: process.env.IMAGEKIT_PUBLIC_KEY || "",
@@ -37,8 +38,8 @@ export async function POST(request: NextRequest) {
             files: newFiles, // Return the new file data
         });
 
-    } catch (error: any) {
+    } catch (error) {
         console.error("Error during bulk copy:", error);
-        return NextResponse.json({ message: error.message || "Failed to copy items" }, { status: 500 });
+        return NextResponse.json({ message: getErrorMessage(error) }, { status: 500 });
     }
 }

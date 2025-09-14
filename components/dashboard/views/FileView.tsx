@@ -5,7 +5,7 @@ import type { File as DbFile } from '@/lib/db/schema';
 import { EmptyState } from '@/components/dashboard/ui/EmptyState';
 import { FileCard } from '@/components/dashboard/ui/FileCard';
 import { FileListRow } from '@/components/dashboard/ui/FileListRow';
-import { FileStatus, useFileStore } from '@/lib/store/useFileStore';
+import { useFileStore } from '@/lib/store/useFileStore';
 
 
 interface FileViewProps {
@@ -34,7 +34,8 @@ interface FileViewProps {
 
 
 export const FileView: React.FC<FileViewProps> = (props) => {
-  const { files, viewMode, activeFilter, onFolderOpen, onUploadClick, selectedIds, onFileSelect, onDoubleClick } = props;
+  const { files, viewMode, activeFilter, onUploadClick, selectedIds, onFileSelect, onDoubleClick } = props;
+  const fileStatuses = useFileStore(state => state.fileStatuses);
 
   if (files.length === 0) {
     const messages = {
@@ -54,7 +55,6 @@ export const FileView: React.FC<FileViewProps> = (props) => {
 
   // Pass all props down to the children
   const childProps = { ...props };
-  const fileStatuses = useFileStore(state => state.fileStatuses);
 
   if (viewMode === 'grid') {
     return (

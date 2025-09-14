@@ -398,7 +398,7 @@ const createFileSlice: StateCreator<FileStoreState> = (set, get) => ({
             }));
         };
 
-        set(state => ({ files: [], selectedIds: new Set() }));
+        set({ files: [], selectedIds: new Set() });
 
         try {
             const response = await fetch('/api/files/empty-trash', {
@@ -794,8 +794,11 @@ const createFileSlice: StateCreator<FileStoreState> = (set, get) => ({
         });
 
         if (isCtrlKeyPressed) { // For Ctrl/Cmd+Click
-            newSelectedIds.has(fileId) ? newSelectedIds.delete(fileId) : newSelectedIds.add(fileId);
-
+            if (newSelectedIds.has(fileId)) {
+                newSelectedIds.delete(fileId);
+            } else {
+                newSelectedIds.add(fileId);
+            }
         } else if (isShiftKeyPressed && lastSelectedId) { // For Shift+Click
             const lastIndex = filesToRender.findIndex(f => f.id === lastSelectedId);
             const currentIndex = filesToRender.findIndex(f => f.id === fileId);

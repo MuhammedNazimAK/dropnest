@@ -8,11 +8,12 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
+import Link from "next/link"
 
 interface SignInFormProps {
   onClose?: () => void;
   isModal?: boolean;
-  setShowModal: Dispatch<SetStateAction<ModalState>>;
+  setShowModal?: Dispatch<SetStateAction<ModalState>>;
 }
 
 type ModalState = {
@@ -190,13 +191,13 @@ return (
         {!isModal && (
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
-              Don't have an account?{" "}
-              <a
+              Don&apos;t have an account?{" "}
+              <Link
                 href="/sign-up"
                 className="font-medium text-black underline underline-offset-2 decoration-1"
               >
                 Sign up
-              </a>
+              </Link>
             </p>
           </div>
         )}
@@ -207,7 +208,7 @@ return (
               Need a fresh account?{" "}
               <button
                 type="button"
-                onClick={() => setShowModal({ type: 'signup', isOpen: true })}
+                onClick={() => setShowModal?.({ type: 'signup', isOpen: true })}
                 className="font-medium text-blue-600 underline underline-offset-2 decoration-1"
               >
                 Create account instead

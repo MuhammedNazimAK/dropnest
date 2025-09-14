@@ -2,7 +2,7 @@
 'use client';
 
 import React from 'react';
-import { useFileStore, type UploadTask } from '@/lib/store/useFileStore';
+import { useFileStore } from '@/lib/store/useFileStore';
 import { CheckCircle, AlertCircle, UploadCloud, Loader2 } from 'lucide-react';
 
 export const UploadProgressTracker = () => {

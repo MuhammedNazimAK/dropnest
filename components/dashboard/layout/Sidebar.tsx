@@ -2,9 +2,10 @@
 
 import React, { useMemo, useState } from 'react';
 import Logo from '@/components/ui/logo';
-import { File, Star, Trash2, Plus, HardDrive } from 'lucide-react';
+import { File, Star, Trash2, Plus } from 'lucide-react';
 import { UploadButton } from '../upload/UploadButton';
 import { useUserStorage } from '@/hooks/useUserStorage';
+import { type File as DbFile } from '@/lib/db/schema';
 
 
 interface SidebarProps {
@@ -12,7 +13,7 @@ interface SidebarProps {
   setActiveFilter: (filter: 'all' | 'starred' | 'trash') => void;
   onFolderCreated: () => void;
   onUploadClick: () => void;
-  createFolder: (name: string, parentId: string | null) => Promise<any>;
+  createFolder: (name: string, parentId: string | null) => Promise<Required<DbFile>>;
   currentFolderId: string | null;
 }
 

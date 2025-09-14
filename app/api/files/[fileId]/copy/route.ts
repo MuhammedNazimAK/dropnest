@@ -3,6 +3,8 @@ import { auth } from "@clerk/nextjs/server";
 import ImageKit from "imagekit";
 import { NextResponse, NextRequest } from "next/server";
 import { copyFilesService } from "@/lib/services/file.service";
+import { getErrorMessage } from "@/utils/errorHandler";
+import { getIdFromRequest } from "@/utils/requestHelpers";
 
 const imageKit = new ImageKit({
     publicKey: process.env.IMAGEKIT_PUBLIC_KEY || "",
@@ -11,17 +13,18 @@ const imageKit = new ImageKit({
 });
 
 
-export async function POST(request: NextRequest, { params }: { params: { fileId: string } }) {
+export async function POST(request: NextRequest) {
     try {
         const { userId } = await auth();
         if (!userId) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const { fileId: itemIdToCopy } = params;
+        const fileId = getIdFromRequest(request, "files");
+        if (!fileId) return NextResponse.json({ error: "File ID is required" }, { status: 400 });
         const { targetFolderId }: { targetFolderId: string | null } = await request.json();
 
-        const newFile = await copyFilesService(itemIdToCopy, targetFolderId, userId, db, imageKit);
+        const newFile = await copyFilesService(fileId, targetFolderId, userId, db, imageKit);
 
         return NextResponse.json({
             success: true,
@@ -29,8 +32,8 @@ export async function POST(request: NextRequest, { params }: { params: { fileId:
             file: newFile,
         });
 
-    } catch (error: any) {
+    } catch (error) {
         console.error("Error copying file:", error);
-        return NextResponse.json({ message: error.message || "Failed to copy file" }, { status: 500 });
+        return NextResponse.json({ message: getErrorMessage(error) }, { status: 500 });
     }
 }

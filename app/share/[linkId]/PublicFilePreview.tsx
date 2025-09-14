@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import Lightbox from "yet-another-react-lightbox";
 import "yet-another-react-lightbox/styles.css";
 import { AlertTriangle } from 'lucide-react';
+import Image from 'next/image';
 
 interface PublicFilePreviewProps {
   // Only pass data that is safe to be public
@@ -60,7 +60,7 @@ export const PublicFilePreview: React.FC<PublicFilePreviewProps> = ({ file }) =>
   if (fileType === 'image') {
     return (
       <div className="w-full h-full flex items-center justify-center bg-gray-800">
-        <img src={file.fileUrl} alt={file.name} className="max-w-full max-h-full object-contain" />
+        <Image src={file.fileUrl} alt={file.name} className="max-w-full max-h-full object-contain" />
       </div>
     );
   }

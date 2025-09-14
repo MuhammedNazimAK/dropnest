@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import type { FolderTreeNode } from '@/app/api/folders/tree/route';
-import { ChevronRight, Folder, FolderPlus } from 'lucide-react';
+import { ChevronRight, Folder } from 'lucide-react';
 import { clsx } from 'clsx'; // A utility for constructing class names conditionally
 
 interface FolderTreeProps {

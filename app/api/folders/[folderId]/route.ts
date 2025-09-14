@@ -3,21 +3,24 @@ import { auth } from '@clerk/nextjs/server';
 import { db } from '@/lib/db';
 import { files } from '@/lib/db/schema';
 import { eq, and, isNull } from 'drizzle-orm';
+import { getIdFromRequest } from '@/utils/requestHelpers';
 
 // Rename folder
 export async function PUT(
-  request: NextRequest,
-  { params }: { params: { folderId: string } }
+  request: NextRequest
 ) {
   try {
     const { userId } = await auth();
-    
+
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { name } = await request.json();
-    const { folderId } = params;
+    const folderId = getIdFromRequest(request, "folders");
+    if (!folderId) {
+      return NextResponse.json({ error: "Folder ID is required" }, { status: 400 });
+    }
 
     if (!name || typeof name !== 'string') {
       return NextResponse.json({ error: 'Folder name is required' }, { status: 400 });
@@ -54,12 +57,12 @@ export async function PUT(
 
     // Update folder name and path
     const oldPath = folder.path;
-    const newPath = folder.parentId 
+    const newPath = folder.parentId
       ? folder.path.replace(/[^/]+$/, name) // Replace last part of path
       : name; // Root level folder
 
     const updatedFolder = await db.update(files)
-      .set({ 
+      .set({
         name,
         path: newPath,
         updatedAt: new Date()
@@ -90,16 +93,18 @@ export async function PUT(
 // Delete folder
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { folderId: string } }
 ) {
   try {
     const { userId } = await auth();
-    
+
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { folderId } = params;
+    const folderId = getIdFromRequest(request, "folders");
+    if (!folderId) {
+      return NextResponse.json({ error: "Folder ID is required" }, { status: 400 });
+    }
 
     // Check if folder exists and belongs to user
     const folder = await db.query.files.findFirst({
@@ -124,14 +129,14 @@ export async function DELETE(
     });
 
     if (children.length > 0) {
-      return NextResponse.json({ 
-        error: 'Cannot delete folder with items. Move or delete items first.' 
+      return NextResponse.json({
+        error: 'Cannot delete folder with items. Move or delete items first.'
       }, { status: 400 });
     }
 
     // Move folder to trash (soft delete)
     const deletedFolder = await db.update(files)
-      .set({ 
+      .set({
         isTrash: true,
         updatedAt: new Date()
       })

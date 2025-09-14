@@ -1,10 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
 import type { File as DbFile } from '@/lib/db/schema';
-import { Skeleton } from '@/components/ui/skeleton';
 import { FileCard } from './ui/FileCard';
-import { EmptyState } from './ui/EmptyState';
 
 interface RecentFilesProps {
     files: Required<DbFile>[] | null;

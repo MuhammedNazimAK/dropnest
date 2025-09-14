@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Providers } from "./providers";
@@ -7,8 +6,23 @@ import { ThemeWrapper } from "./ThemeWrapper";
 import { Toaster } from "sonner";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 
-const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
-const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
+import localFont from "next/font/local";
+
+const geistSans = localFont({
+  src: [
+    { path: "/fonts/Geist-Regular.woff2", weight: "400", style: "normal" },
+    { path: "/fonts/Geist-Bold.woff2", weight: "700", style: "normal" },
+  ],
+  variable: "--font-geist-sans",
+});
+
+const geistMono = localFont({
+  src: [
+    { path: "/fonts/GeistMono-Regular.woff2", weight: "400", style: "normal" },
+    { path: "/fonts/GeistMono-Bold.woff2", weight: "700", style: "normal" },
+  ],
+  variable: "--font-geist-mono",
+});
 
 export const metadata: Metadata = {
   title: "DropNest",

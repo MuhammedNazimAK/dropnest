@@ -7,7 +7,6 @@ import { motion } from 'framer-motion';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { clsx } from 'clsx';
 import { RenameInput } from './RenameInput';
-import { useFileStore } from '@/lib/store/useFileStore';
 import { type FileStatus } from '@/lib/store/useFileStore';
 
 // DropdownMenu components from a UI library Shadcn/UI
@@ -61,9 +60,7 @@ export const FileCard: React.FC<FileCardProps> = ({ file, status, isReadOnly, on
     disabled: renamingId === file.id,
   });
 
-  const fileStatuses = useFileStore(state => state.fileStatuses);
   const isLoading = status === 'loading';
-  const isError = status === 'error';
 
   const {
     setNodeRef: droppableRef, // A separate ref for the droppable target
@@ -221,7 +218,7 @@ export const FileCard: React.FC<FileCardProps> = ({ file, status, isReadOnly, on
           <img
             src={file.thumbnailUrl}
             alt={file.name}
-            className="max-h-full max-w-full object-contain"
+            className="w-32 h-32 object-contain rounded-md"
           />
         )}
       </div>

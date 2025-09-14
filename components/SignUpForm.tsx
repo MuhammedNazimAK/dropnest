@@ -16,7 +16,7 @@ import { z } from "zod";
 interface SignUpFormProps {
   isModal?: boolean;
   onClose?: () => void;
-  setShowModal: Dispatch<SetStateAction<ModalState>>;
+  setShowModal?: Dispatch<SetStateAction<ModalState>>;
 }
 
 type ModalState = {
@@ -24,7 +24,7 @@ type ModalState = {
   isOpen: boolean;
 };
 
-export default function SignUpForm({ isModal = false, onClose, setShowModal }: SignUpFormProps) {
+export default function SignUpForm({ isModal = false, setShowModal }: SignUpFormProps) {
   const router = useRouter();
   const [verifying, setVerifying] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -172,7 +172,7 @@ export default function SignUpForm({ isModal = false, onClose, setShowModal }: S
           {/* Footer */}
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
-              Didn't receive the code?{" "}
+              Didn&apos;t receive the code?{" "}
               <button
                 type="button"
                 className="font-medium text-black underline underline-offset-2 decoration-1"
@@ -181,6 +181,7 @@ export default function SignUpForm({ isModal = false, onClose, setShowModal }: S
                     await signUp?.prepareEmailAddressVerification({ strategy: "email_code" });
                     toast.success("A new code has been sent.");
                   } catch (err) {
+                    console.warn(err)
                     toast.error("Failed to resend code. Please try again.");
                   }
                 }}
@@ -350,7 +351,7 @@ export default function SignUpForm({ isModal = false, onClose, setShowModal }: S
               Already have an account?{" "}
               <button
                 type="button"
-                onClick={() => setShowModal({ type: 'signin', isOpen: true })}
+                onClick={() => setShowModal?.({ type: 'signin', isOpen: true })}
                 className="font-medium text-blue-600 underline underline-offset-2 decoration-1"
               >
                 Sign in instead

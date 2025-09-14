@@ -15,8 +15,6 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const folderId = searchParams.get('folderId'); // For getting folder info
 
-    const active = searchParams.get('active');
-
     // If requesting specific folder info
     if (folderId && folderId !== 'root') {
       const folder = await db.query.files.findFirst({
@@ -39,7 +37,7 @@ export async function GET(request: NextRequest) {
     const trash = searchParams.get('trash') === 'true';
 
     // Build query conditions
-    let conditions = [eq(files.userId, userId)];
+    const conditions = [eq(files.userId, userId)];
 
       if (trash) {
       conditions.push(eq(files.isTrash, true));

@@ -1,16 +1,15 @@
-import { db } from "@/lib/db";
+import { db, type DrizzleDB  } from "@/lib/db";
 import { files } from "@/lib/db/schema";
 import { and, eq, inArray } from "drizzle-orm";
 import ImageKit from "imagekit";
-import type { PgTransaction } from "drizzle-orm/pg-core";
 import { v4 as uuidv4 } from "uuid";
-
+import { getErrorMessage } from "@/utils/errorHandler";
 
 // --- HELPER FUNCTIONS ---
 
 // Recursive helper to get all descendant IDs.
 async function getDescendantIds(
-    tx: PgTransaction<any, any, any> | typeof db,
+    tx: DrizzleDB,
     folderId: string,
     userId: string
 ): Promise<{ dbIds: string[], imageKitIds: string[], folderPaths: string[] }> {
@@ -44,22 +43,22 @@ async function getDescendantIds(
 
 
 async function updateDescendantPaths(
-    tx: PgTransaction<any, any, any>,
+    tx: DrizzleDB,
     parentId: string, newParentPath: string, userId: string
 ) {
-    const children = await tx.select().from(files) // Use .select() instead of .query
+    const children = await tx.select().from(files)
         .where(and(eq(files.parentId, parentId), eq(files.userId, userId)));
 
     for (const child of children) {
 
-        const newChildPath = child.isFolder
-            ? `${newParentPath}/${child.id}`
-            : `/dropnest/${userId}/${newParentPath}/${child.name}`;
-
-        await tx.update(files).set({ path: newChildPath }).where(eq(files.id, child.id));
-
         if (child.isFolder) {
-            await updateDescendantPaths(tx, child.id, newChildPath, userId);
+            const newChildPath = `${newParentPath}/${child.id}`;
+
+             await tx.update(files)
+                .set({ path: newChildPath })
+                .where(eq(files.id, child.id));
+
+             await updateDescendantPaths(tx, child.id, newChildPath, userId);
         }
     }
 }
@@ -111,18 +110,16 @@ export async function deleteFilesService(
     // Reversing the array helps ensure children are deleted before parents.
     if (allImageKitFolderPathsToDelete.length > 0) {
 
-        const fullImageKitPaths = allImageKitFolderPathsToDelete.map(path => `/dropnest/${userId}/${path}`);
+        // const fullImageKitPaths = allImageKitFolderPathsToDelete.map(path => `/dropnest/${userId}/${path}`);
 
         for (const folderPath of allImageKitFolderPathsToDelete.reverse()) {
             try {
 
                 await imageKitClient.deleteFolder(folderPath);
 
-            } catch (folderError: any) {
+            } catch (folderError) {
                 // It's safe to ignore "folder not found" errors, as the goal is for it to be gone.
-                if (folderError.name !== 'NotFoundError') {
-                    console.warn(`Could not delete folder '${folderPath}' from ImageKit: ${folderError.message}`);
-                }
+                console.warn(`Could not delete folder '${folderPath}' from ImageKit:`, getErrorMessage(folderError));
             }
         }
     }
@@ -165,7 +162,6 @@ export async function copyFilesService(
 
     // 2. 2. Determine the destination folder path for ImageKit
     let imageKitFolderPath = `/dropnest/${userId}`;
-    let dbParentPath = ''; // The path of the parent folder in the DB
 
     if (targetFolderId) {
         const targetFolder = await dbClient.query.files.findFirst({
@@ -174,7 +170,6 @@ export async function copyFilesService(
         });
         if (!targetFolder) throw new Error("Target folder not found.");
         imageKitFolderPath = `/dropnest/${userId}/${targetFolder.path}`;
-        dbParentPath = targetFolder.path;
     }
 
     // 3. Perform the copy by uploading from the original file's URL
@@ -191,9 +186,6 @@ export async function copyFilesService(
 
     // 4. Construct the new DB path for the copied file
     const newFileId = uuidv4();
-
-    // The path is either the parent's path + new ID, or just the new ID if at root
-    const newDbPath = dbParentPath ? `${dbParentPath}/${newFileId}` : newFileId;
 
     const [newFileRecord] = await dbClient.insert(files).values({
         id: newFileId,
@@ -257,9 +249,9 @@ export async function moveFileService(
             fileToMove.thumbnailUrl = uploadResponse.thumbnailUrl;
             fileToMove.path = uploadResponse.filePath;
 
-        } catch (error: any) {
-            console.error(`ImageKit operation failed for file ${fileToMove.id}:`, error.message);
-            throw new Error(`ImageKit operation failed: ${error.message}`);
+        } catch (error) {
+            console.error(`ImageKit operation failed for file ${fileToMove.id}:`);
+            throw new Error(getErrorMessage(error));
         }
     }
 

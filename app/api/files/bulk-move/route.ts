@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import ImageKit from "imagekit";
 import { NextResponse, NextRequest } from "next/server";
 import { moveFileService } from "@/lib/services/file.service";
+import { getErrorMessage } from "@/utils/errorHandler";
 
 
 const imageKit = new ImageKit({
@@ -37,8 +38,8 @@ export async function POST(request: NextRequest) {
             message: `Moved ${itemIds.length} item(s) successfully.`,
         });
 
-    } catch (error: any) {
+    } catch (error) {
         console.error("Error during bulk move:", error);
-        return NextResponse.json({ message: error.message || "Failed to move items" }, { status: 500 });
+        return NextResponse.json({ message: getErrorMessage(error) }, { status: 500 });
     }
 }

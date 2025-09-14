@@ -1,4 +1,3 @@
-import { Skeleton } from "@/components/ui/skeleton";
 import { FileCardSkeleton } from "../ui/FileCardSkeleton";
 
 export const FileViewLoader = () => {

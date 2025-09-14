@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { files } from "@/lib/db/schema";
+import { getErrorMessage } from "@/utils/errorHandler";
 import { auth } from "@clerk/nextjs/server";
 import { and, eq } from "drizzle-orm";
 import ImageKit from "imagekit";
@@ -87,9 +88,9 @@ export async function POST(request: NextRequest) {
       uploadedFiles: [newlyCreatedFile],
     });
 
-  } catch (error: any) {
+  } catch (error) {
 
     console.error("Upload failed for a file:", error);
-    return NextResponse.json({ error: error.message || "Failed to process file" }, { status: 500 });
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }

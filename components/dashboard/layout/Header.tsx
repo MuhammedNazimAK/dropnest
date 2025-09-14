@@ -36,7 +36,7 @@ export const Header: React.FC<HeaderProps> = ({
   onEmptyTrash,
   disableEmptyTrash
 }) => {
-  const { user, isLoaded } = useUser();
+  const { isLoaded } = useUser();
 
   return (
     <header className="flex-shrink-0 h-20 px-6 md:px-8 flex items-center justify-between border-b border-gray-200 dark:border-gray-800 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm sticky top-0 z-10">

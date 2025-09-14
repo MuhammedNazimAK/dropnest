@@ -5,7 +5,6 @@ import { Cloud, Upload, Search, FolderOpen, Eye, Star, File } from 'lucide-react
 import { Button } from '@heroui/button';
 import { Card, CardBody } from '@heroui/card';
 import { Variants, AnimatePresence, motion } from 'framer-motion';
-import { useRouter } from 'next/navigation';
 import { Modal, ModalContent, ModalBody } from '@heroui/modal';
 import SignInForm from '@/components/SignInForm';
 import SignUpForm from '@/components/SignUpForm';
@@ -20,8 +19,6 @@ const DropNestLanding = () => {
   const [activeFeature, setActiveFeature] = useState(0);
   const [showModal, setShowModal] = useState<ModalState>({ type: null, isOpen: false });
   const [copied, setCopied] = useState('');
-
-  const router = useRouter();
 
   const handleCopy = async (text: string, field: string) => {
     try {
@@ -91,7 +88,7 @@ const DropNestLanding = () => {
       setActiveFeature(prev => (prev + 1) % features.length);
     }, 2000);
     return () => clearInterval(interval);
-  }, []);
+  }, [features.length]);
 
   const techStack = [
     { name: "Next.js", color: "from-black to-gray-700" },

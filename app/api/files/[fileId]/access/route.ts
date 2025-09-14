@@ -1,17 +1,18 @@
 import { db } from "@/lib/db";
 import { files } from "@/lib/db/schema";
+import { getIdFromRequest } from "@/utils/requestHelpers";
 import { auth } from "@clerk/nextjs/server";
 import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
-export async function PUT(request: Request, { params }: { params: { fileId: string } }) {
+export async function PUT(request: Request) {
     try {
         const { userId } = await auth();
         if (!userId) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const { fileId } = params;
+        const fileId = getIdFromRequest(request, "files");
         if (!fileId) {
             return NextResponse.json({ error: "File ID is required" }, { status: 400 });
         }

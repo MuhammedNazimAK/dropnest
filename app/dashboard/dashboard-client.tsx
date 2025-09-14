@@ -41,7 +41,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 
 
@@ -74,15 +73,12 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles }) => {
   const createFolder = useFileStore(state => state.createFolder);
   const renameItem = useFileStore(state => state.renameItem);
   const emptyTrash = useFileStore(state => state.emptyTrash);
-  const fileStatuses = useFileStore(state => state.fileStatuses);
-  const lastSelectedId = useFileStore(state => state.lastSelectedId);
 
   // --- LOCAL UI STATE ---
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<DbFile[] | null>(null);
-  const [isSearching, setIsSearching] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [activeDragItem, setActiveDragItem] = useState<Active | null>(null);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
@@ -330,7 +326,7 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles }) => {
     };
 
     fetchData();
-  }, []);
+  }, [initialFiles, initializeFiles]);
 
   useEffect(() => {
     const searchTimeout = setTimeout(async () => {
@@ -340,6 +336,7 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles }) => {
           const response = await fetch(`/api/files/search?q=${searchQuery}`);
           setSearchResults(await response.json());
         } catch (error) {
+          console.log(error);
           setSearchResults([]);
         }
       } else {

@@ -1,16 +1,20 @@
 import { db } from "@/lib/db";
 import { files, sharedLinks } from "@/lib/db/schema";
+import { getIdFromRequest } from "@/utils/requestHelpers";
 import { auth } from "@clerk/nextjs/server";
 import { and, eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
 
-export async function POST(request: NextRequest, { params }: { params: { fileId: string } }) {
+export async function POST(request: NextRequest) {
     try {
         const { userId } = await auth();
         if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-        const { fileId } = params;
+        const fileId = getIdFromRequest(request, "files");
+        if (!fileId) {
+            return NextResponse.json({ error: "File ID is required" }, { status: 400 });
+        }
 
         // Verify the user actually owns the file they're trying to share
         const file = await db.query.files.findFirst({

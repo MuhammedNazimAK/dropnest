@@ -3,7 +3,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Upload, File, X } from 'lucide-react';
 import { useFileStore } from '@/lib/store/useFileStore';
-import { shallow } from 'zustand/shallow';
 
 interface UploadModalProps {
   isOpen: boolean;

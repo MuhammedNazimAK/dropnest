@@ -49,7 +49,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ file, onClose }) => {
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center" onClick={onClose}>
       <div className="w-full max-w-md bg-white dark:bg-gray-800 rounded-lg shadow-xl" onClick={e => e.stopPropagation()}>
         <header className="p-4 border-b dark:border-gray-700 flex justify-between items-center">
-          <h2 className="text-lg font-semibold truncate">Share "{file.name}"</h2>
+          <h2 className="text-lg font-semibold truncate">Share &quot;{file.name}&quot;</h2>
           <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
             <X className="w-5 h-5" />
           </button>

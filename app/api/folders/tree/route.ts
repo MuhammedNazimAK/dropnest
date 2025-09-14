@@ -1,9 +1,11 @@
 import { db } from "@/lib/db";
 import { files } from "@/lib/db/schema";
 import { auth } from "@clerk/nextjs/server";
-import { and, eq, isNull } from "drizzle-orm";
-import { NextRequest, NextResponse } from "next/server";
+import { and, eq } from "drizzle-orm";
+import { NextResponse } from "next/server";
+import { type File as DbFile } from '@/lib/db/schema';
 
+type Folder = Pick<Required<DbFile>, 'id' | 'name' | 'parentId'>;
 
 export interface FolderTreeNode {
   id: string;
@@ -12,7 +14,7 @@ export interface FolderTreeNode {
 }
 
 // Helper function to build the tree from a flat list of folders
-const buildTree = (folders: any[], parentId: string | null = null): FolderTreeNode[] => {
+const buildTree = (folders: Folder[], parentId: string | null = null): FolderTreeNode[] => {
   return folders
     .filter(folder => folder.parentId === parentId)
     .map(folder => ({
@@ -22,7 +24,7 @@ const buildTree = (folders: any[], parentId: string | null = null): FolderTreeNo
     }));
 };
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const { userId } = await auth();
     if (!userId) {
