@@ -19,14 +19,18 @@ type ModalState = {
 const DropNestLanding = () => {
   const [activeFeature, setActiveFeature] = useState(0);
   const [showModal, setShowModal] = useState<ModalState>({ type: null, isOpen: false });
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState('');
 
   const router = useRouter();
 
-  const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1000);
+  const handleCopy = async (text: string, field: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(field); // Set which field was copied
+      setTimeout(() => setCopied(''), 2000); // Clear after 2 seconds
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+    }
   };
 
   const features = [
@@ -354,9 +358,12 @@ const DropNestLanding = () => {
         placement="center"
         backdrop="blur"
         size="4xl"
+        closeButton={false}
+        disableAnimation={true}
+        hideCloseButton={true}
         classNames={{
           backdrop: "bg-black/60 backdrop-blur-sm",
-          base: "bg-transparent shadow-none max-w-4xl",
+          base: "bg-transparent shadow-none max-w-6xl",
           body: "p-0"
         }}
       >
@@ -398,87 +405,86 @@ const DropNestLanding = () => {
                 </motion.div>
               )}
             </AnimatePresence>
+
+
+            {/* ---------------- Demo Credentials Panel (Outside Modal) ---------------- */}
+            {showModal.type === "signin" && (
+              <motion.div
+                key="demo-panel"
+                className="fixed top-1/2 right-4 transform -translate-y-1/2 w-72 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-5 shadow-lg z-[60]"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                transition={{ delay: 0.2, type: "spring" }}
+              >
+                <div className="text-center mb-4">
+                  <motion.div
+                    className="text-3xl mb-2"
+                    animate={{ rotate: [0, 10, -10, 0] }}
+                    transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+                  />
+                  <h3 className="font-semibold text-gray-900 text-lg">Demo Credentials</h3>
+                  <p className="text-xs text-gray-600 mt-1">Instant access to full experience</p>
+                </div>
+
+                <div className="space-y-3">
+                  <motion.div className="bg-white rounded-lg p-3 border border-gray-200 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Email</p>
+                        <p className="text-sm font-mono text-gray-800">demo@dropnest.com</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => { console.log("clicked email copy button"); e.preventDefault(); e.stopPropagation(); handleCopy("demo@dropnest.com", "email") }}
+                        className="text-xs cursor-pointer bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 transition-colors"
+                      >
+                        {copied === "email" ? "Copied!" : "Copy"}
+                      </button>
+                    </div>
+                  </motion.div>
+
+                  <motion.div className="bg-white rounded-lg p-3 border border-gray-200 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Password</p>
+                        <p className="text-sm font-mono text-gray-800">demo123</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleCopy("demo123", "password") }}
+                        className="text-xs cursor-pointer bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 transition-colors"
+                      >
+                        {copied === "password" ? "Copied!" : "Copy"}
+                      </button>
+                    </div>
+                  </motion.div>
+                </div>
+
+                <motion.div
+                  className="mt-4 text-center"
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                >
+                  <button
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.dispatchEvent(new CustomEvent("fillDemo")) }}
+                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-sm"
+                  >
+                    Auto-fill Credentials
+                  </button>
+                </motion.div>
+
+                <div className="mt-4 text-center">
+                  <p className="text-xs text-gray-500">Pre-populated with files, folders, and activity</p>
+                </div>
+              </motion.div>
+            )}
+
+
           </ModalBody>
         </ModalContent>
       </Modal>
-
-      {/* ---------------- Demo Credentials Panel (Outside Modal) ---------------- */}
-        {showModal.type === "signin" && (
-          <motion.div
-            key="demo-panel"
-            className="fixed top-1/2 right-4 transform -translate-y-1/2 w-72 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-5 shadow-lg z-[60]"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 20 }}
-            transition={{ delay: 0.2, type: "spring" }}
-          >
-            <div className="text-center mb-4">
-              <motion.div
-                className="text-3xl mb-2"
-                animate={{ rotate: [0, 10, -10, 0] }}
-                transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
-              />
-              <h3 className="font-semibold text-gray-900 text-lg">Demo Credentials</h3>
-              <p className="text-xs text-gray-600 mt-1">Instant access to full experience</p>
-            </div>
-
-            <div className="space-y-3">
-              <motion.div className="bg-white rounded-lg p-3 border border-gray-200 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Email</p>
-                    <p className="text-sm font-mono text-gray-800">demo@dropnest.com</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleCopy("demo@dropnest.com")}
-                    className="text-xs cursor-pointer bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 transition-colors"
-                  >
-                    Copy
-                  </button>
-                </div>
-              </motion.div>
-
-              <motion.div className="bg-white rounded-lg p-3 border border-gray-200 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Password</p>
-                    <p className="text-sm font-mono text-gray-800">demo123</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleCopy("demo123")}
-                    className="text-xs cursor-pointer bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 transition-colors"
-                  >
-                    Copy
-                  </button>
-                </div>
-              </motion.div>
-            </div>
-
-            <motion.div
-              className="mt-4 text-center"
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.99 }}
-            >
-              <button
-                type="button"
-                onClick={() => window.dispatchEvent(new CustomEvent("fillDemo"))}
-                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-sm"
-              >
-                Auto-fill Credentials
-              </button>
-            </motion.div>
-
-            <div className="mt-4 text-center">
-              <p className="text-xs text-gray-500">Pre-populated with files, folders, and activity</p>
-            </div>
-
-            {copied && (
-              <span className="absolute top-2 right-2 text-green-600 text-xs font-medium">Copied!</span>
-            )}
-          </motion.div>
-        )}
     </div>
   );
 };
