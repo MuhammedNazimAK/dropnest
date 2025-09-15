@@ -98,6 +98,9 @@ const DropNestLanding = () => {
     { name: "Clerk", color: "from-purple-500 to-indigo-600" }
   ];
 
+  const demoEmail = process.env.NEXT_PUBLIC_DEMO_USER_EMAIL || "email_not_set";
+  const demoPassword = process.env.NEXT_PUBLIC_DEMO_USER_PASSWORD || "password_not_set";
+
   return (
     <div className="min-h-screen bg-white text-black overflow-hidden">
 
@@ -111,7 +114,6 @@ const DropNestLanding = () => {
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <motion.div
             className="flex items-center space-x-2 cursor-pointer"
-            whileHover={{ scale: 1.05 }}
           >
             <motion.div
               className="w-8 h-8 bg-gradient-to-r from-blue-500 to-gray-700 rounded-lg flex items-center justify-center cursor-pointer"
@@ -330,7 +332,6 @@ const DropNestLanding = () => {
         <div className="max-w-7xl mx-auto text-center">
           <motion.div
             className="flex items-center justify-center space-x-2 mb-4 cursor-pointer"
-            whileHover={{ scale: 1.05 }}
           >
             <motion.div
               className="w-6 h-6 bg-gradient-to-r from-blue-500 to-gray-700 rounded-lg flex items-center justify-center"
@@ -429,15 +430,15 @@ const DropNestLanding = () => {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Email</p>
-                        <p className="text-sm font-mono text-gray-800">demo@dropnest.com</p>
+                        <p className="text-sm font-mono text-gray-800">{demoEmail}</p>
                       </div>
-                      <button
+                      {/* <button
                         type="button"
-                        onClick={(e) => { console.log("clicked email copy button"); e.preventDefault(); e.stopPropagation(); handleCopy("demo@dropnest.com", "email") }}
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleCopy(demoEmail, "email") }}
                         className="text-xs cursor-pointer bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 transition-colors"
                       >
                         {copied === "email" ? "Copied!" : "Copy"}
-                      </button>
+                      </button> */}
                     </div>
                   </motion.div>
 
@@ -445,15 +446,15 @@ const DropNestLanding = () => {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Password</p>
-                        <p className="text-sm font-mono text-gray-800">demo123</p>
+                        <p className="text-sm font-mono text-gray-800">{demoPassword}</p>
                       </div>
-                      <button
+                      {/* <button
                         type="button"
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleCopy("demo123", "password") }}
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleCopy(demoPassword, "password") }}
                         className="text-xs cursor-pointer bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 transition-colors"
                       >
                         {copied === "password" ? "Copied!" : "Copy"}
-                      </button>
+                      </button> */}
                     </div>
                   </motion.div>
                 </div>

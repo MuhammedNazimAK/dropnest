@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form"
 import { useSignUp } from "@clerk/nextjs"
 import React, { Dispatch, SetStateAction, useState } from "react"
 import Link from "next/link";
-import { Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, X } from "lucide-react";
 import { toast } from "sonner"
 
 //zod custom schema
@@ -24,7 +24,7 @@ type ModalState = {
   isOpen: boolean;
 };
 
-export default function SignUpForm({ isModal = false, setShowModal }: SignUpFormProps) {
+export default function SignUpForm({ isModal = false, setShowModal, onClose }: SignUpFormProps) {
   const router = useRouter();
   const [verifying, setVerifying] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -104,8 +104,20 @@ export default function SignUpForm({ isModal = false, setShowModal }: SignUpForm
 
   if (verifying) {
     return (
-      <div className={isModal ? "w-full" : "w-full max-w-sm mx-auto"}>
-        <div className={`bg-white border border-gray-200 rounded-2xl shadow-sm ${isModal ? 'p-6' : 'p-8'}`}>
+      <div className={isModal ? "w-full max-w-xs mx-auto" : "w-full max-w-sm mx-auto"}>
+        <div className={`relative bg-white border border-gray-200 rounded-2xl shadow-sm ${isModal ? 'p-6' : 'p-8'}`}>
+
+          {isModal && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="absolute top-4 right-4 p-1 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+              aria-label="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
+
           {/* Header Section */}
           <div className="text-center mb-6">
             <h1 className={`font-light text-gray-900 mb-2 tracking-tight ${isModal ? 'text-2xl' : 'text-3xl'}`}>
@@ -149,11 +161,10 @@ export default function SignUpForm({ isModal = false, setShowModal }: SignUpForm
             <button
               type="submit"
               disabled={isSubmitting}
-              className={`w-full py-3 px-4 font-medium rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 text-sm ${
-                isModal 
-                  ? 'bg-gradient-to-r from-blue-500 to-gray-700 text-white focus:ring-blue-500' 
-                  : 'bg-black text-white focus:ring-black'
-              }`}
+              className={`w-full py-3 px-4 font-medium rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 text-sm ${isModal
+                ? 'bg-gradient-to-r from-blue-500 to-gray-700 text-white focus:ring-blue-500'
+                : 'bg-black text-white focus:ring-black'
+                }`}
             >
               {isSubmitting ? (
                 <div className="flex items-center justify-center">
@@ -198,7 +209,19 @@ export default function SignUpForm({ isModal = false, setShowModal }: SignUpForm
   return (
     <div className={isModal ? "w-[400px] mx-auto" : "max-w-sm mx-auto"}>
       {/* Card/Box Container */}
-      <div className={`bg-white border border-gray-200 rounded-2xl shadow-sm ${isModal ? 'p-6' : 'p-8'}`}>
+      <div className={`relative bg-white border border-gray-200 rounded-2xl shadow-sm ${isModal ? 'p-6' : 'p-8'}`}>
+
+        {isModal && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute top-4 right-4 p-1 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+            aria-label="Close"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
+
         {/* Header Section */}
         <div className="text-center mb-6">
           <h1 className={`font-light text-gray-900 mb-2 tracking-tight ${isModal ? 'text-2xl' : 'text-3xl'}`}>
@@ -310,11 +333,10 @@ export default function SignUpForm({ isModal = false, setShowModal }: SignUpForm
           <button
             type="submit"
             disabled={isSubmitting}
-            className={`w-full py-3 px-4 font-medium rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 text-sm ${
-              isModal 
-                ? 'bg-gradient-to-r from-blue-500 to-gray-700 text-white focus:ring-blue-500' 
-                : 'bg-black text-white focus:ring-black'
-            }`}
+            className={`w-full py-3 px-4 font-medium rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 text-sm ${isModal
+              ? 'bg-gradient-to-r from-blue-500 to-gray-700 text-white focus:ring-blue-500'
+              : 'bg-black text-white focus:ring-black'
+              }`}
           >
             {isSubmitting ? (
               <div className="flex items-center justify-center">
@@ -346,18 +368,18 @@ export default function SignUpForm({ isModal = false, setShowModal }: SignUpForm
         )}
 
         {/* Modal Footer */}
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Already have an account?{" "}
-              <button
-                type="button"
-                onClick={() => setShowModal?.({ type: 'signin', isOpen: true })}
-                className="font-medium text-blue-600 underline underline-offset-2 decoration-1"
-              >
-                Sign in instead
-              </button>
-            </p>
-          </div>
+        <div className="mt-6 text-center">
+          <p className="text-sm text-gray-600">
+            Already have an account?{" "}
+            <button
+              type="button"
+              onClick={() => setShowModal?.({ type: 'signin', isOpen: true })}
+              className="font-medium text-blue-600 underline underline-offset-2 decoration-1"
+            >
+              Sign in instead
+            </button>
+          </p>
+        </div>
       </div>
     </div>
   );

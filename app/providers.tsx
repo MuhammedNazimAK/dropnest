@@ -1,49 +1,43 @@
 'use client';
 
-import { ThemeProvider as NextThemeProvider, type ThemeProviderProps } from 'next-themes';
-import { ImageKitProvider } from "imagekitio-next"
+import * as React from 'react';
+import { ThemeProvider as NextThemesProvider } from 'next-themes';
+import { ImageKitProvider } from "imagekitio-next";
 import { HeroUIProvider } from '@heroui/system';
 import { UploadProgressProvider } from '@/contexts/UploadProgressContext';
-
-
-export interface ProviderProps {
-  children: React.ReactNode;
-  themeProps?: ThemeProviderProps;
-}
-
+import { Toaster } from 'sonner';
 
 const authenticator = async () => {
   try {
-
     const response = await fetch('/api/imagekit-auth');
-    const data = await response.json();
-    return data;
-
+    if (!response.ok) throw new Error("Authentication failed");
+    return await response.json();
   } catch (error) {
-
-    console.error("Authentication error: ", error);
-    throw error;
-
+    console.error("ImageKit authenticator error:", error);
+    return { signature: null, token: null, expire: 0 };
   }
 }
 
-
-
-export function Providers({ children, themeProps }: ProviderProps) {
+export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <NextThemeProvider {...themeProps}>
+    <NextThemesProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      disableTransitionOnChange
+    >
       <ImageKitProvider
         publicKey={process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY || ''}
         urlEndpoint={process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT || ''}
-        authenticator={authenticator}>
+        authenticator={authenticator}
+      >
         <HeroUIProvider>
           <UploadProgressProvider>
             {children}
+            <Toaster position="top-right" richColors />
           </UploadProgressProvider>
         </HeroUIProvider>
       </ImageKitProvider>
-    </NextThemeProvider>
+    </NextThemesProvider>
   );
 }
-
-

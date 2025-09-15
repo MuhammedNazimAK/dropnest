@@ -7,7 +7,7 @@ import { Dispatch, SetStateAction, useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, X } from "lucide-react";
 import Link from "next/link"
 
 interface SignInFormProps {
@@ -75,20 +75,35 @@ export default function SignInForm({ onClose, isModal = false, setShowModal }: S
     }
   }
 
+  const demoEmail = process.env.NEXT_PUBLIC_DEMO_USER_EMAIL || "email_not_set";
+  const demoPassword = process.env.NEXT_PUBLIC_DEMO_USER_PASSWORD || "password_not_set";
+
   useEffect(() => {
-  const handleFillDemo = () => {
-    setValue("identifier", "demo@dropnest.com");
-    setValue("password", "demo123");
-  };
+    const handleFillDemo = () => {
+      setValue("identifier", demoEmail);
+      setValue("password", demoPassword);
+    };
 
-  window.addEventListener('fillDemo', handleFillDemo);
-  return () => window.removeEventListener('fillDemo', handleFillDemo);
-}, [setValue]);
+    window.addEventListener('fillDemo', handleFillDemo);
+    return () => window.removeEventListener('fillDemo', handleFillDemo);
+  }, [setValue]);
 
-return (
+  return (
     <div className={isModal ? "w-[400px] mx-auto" : "w-full max-w-sm mx-auto"}>
       {/* Card/Box Container */}
-      <div className={`bg-white border border-gray-200 rounded-2xl shadow-sm ${isModal ? 'p-6' : 'p-8'}`}>
+      <div className={`relative bg-white border border-gray-200 rounded-2xl shadow-sm ${isModal ? 'p-6' : 'p-8'}`}>
+
+        {isModal && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute top-4 right-4 p-1 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+            aria-label="Close"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
+
         {/* Header Section */}
         <div className="text-center mb-6">
           <h1 className={`font-light text-gray-900 mb-2 tracking-tight ${isModal ? 'text-2xl' : 'text-3xl'}`}>
@@ -167,11 +182,10 @@ return (
           <button
             type="submit"
             disabled={isSubmitting}
-            className={`w-full py-3 px-4 font-medium rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 text-sm ${
-              isModal 
-                ? 'bg-gradient-to-r from-blue-500 to-gray-700 text-white focus:ring-blue-500' 
+            className={`w-full py-3 px-4 font-medium rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 text-sm ${isModal
+                ? 'bg-gradient-to-r from-blue-500 to-gray-700 text-white focus:ring-blue-500'
                 : 'bg-black text-white focus:ring-black'
-            }`}
+              }`}
           >
             {isSubmitting ? (
               <div className="flex items-center justify-center">
@@ -203,18 +217,18 @@ return (
         )}
 
         {/* Modal Footer */}
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Need a fresh account?{" "}
-              <button
-                type="button"
-                onClick={() => setShowModal?.({ type: 'signup', isOpen: true })}
-                className="font-medium text-blue-600 underline underline-offset-2 decoration-1"
-              >
-                Create account instead
-              </button>
-            </p>
-          </div>
+        <div className="mt-6 text-center">
+          <p className="text-sm text-gray-600">
+            Need a fresh account?{" "}
+            <button
+              type="button"
+              onClick={() => setShowModal?.({ type: 'signup', isOpen: true })}
+              className="font-medium text-blue-600 underline underline-offset-2 decoration-1"
+            >
+              Create account instead
+            </button>
+          </p>
+        </div>
       </div>
     </div>
   );
