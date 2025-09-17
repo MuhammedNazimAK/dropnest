@@ -69,7 +69,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeFilter, setActiveFilter,
 
           <button
             onClick={() => setIsCreating(true)}
-            className="w-full flex items-center space-x-2 px-4 py-2.5 text-sm font-medium text-foreground bg-secondary rounded-lg hover:bg-muted transition-colors"
+            className="w-full flex items-center space-x-2 px-4 py-2.5 text-sm font-medium text-foreground bg-secondary rounded-lg hover:bg-muted transition-colors cursor-pointer"
           >
             <Plus className="h-4 w-4" />
             <span>Create Folder</span>
@@ -87,8 +87,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeFilter, setActiveFilter,
               autoFocus
             />
             <div className="flex space-x-2">
-              <button type="submit" className="w-full bg-primary text-primary-foreground py-1.5 rounded-md text-sm hover:bg-primary/90">Create</button>
-              <button type="button" onClick={() => setIsCreating(false)} className="w-full bg-secondary py-1.5 rounded-md text-sm hover:bg-muted">Cancel</button>
+              <button type="submit" className="w-full bg-primary text-primary-foreground py-1.5 rounded-md text-sm hover:bg-primary/90 cursor-pointer">Create</button>
+              <button type="button" onClick={() => setIsCreating(false)} className="w-full bg-secondary py-1.5 rounded-md text-sm hover:bg-muted cursor-pointer">Cancel</button>
             </div>
           </form>
         )}

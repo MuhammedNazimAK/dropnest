@@ -13,7 +13,6 @@ interface SearchInputProps {
 const SearchInput: React.FC<SearchInputProps> = ({
   searchQuery,
   setSearchQuery,
-  isDarkMode,
   placeholder = "Search files..."
 }) => {
   return (

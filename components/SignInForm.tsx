@@ -86,6 +86,7 @@ export default function SignInForm({ onClose, isModal = false, setShowModal }: S
 
     window.addEventListener('fillDemo', handleFillDemo);
     return () => window.removeEventListener('fillDemo', handleFillDemo);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setValue]);
 
   return (

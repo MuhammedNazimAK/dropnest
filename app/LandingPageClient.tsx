@@ -18,17 +18,6 @@ type ModalState = {
 const DropNestLanding = () => {
   const [activeFeature, setActiveFeature] = useState(0);
   const [showModal, setShowModal] = useState<ModalState>({ type: null, isOpen: false });
-  const [copied, setCopied] = useState('');
-
-  const handleCopy = async (text: string, field: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(field); // Set which field was copied
-      setTimeout(() => setCopied(''), 2000); // Clear after 2 seconds
-    } catch (err) {
-      console.error('Failed to copy text: ', err);
-    }
-  };
 
   const features = [
     { icon: Upload, text: "Drag & drop upload" },
