@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const Spinner = () => (
-  <svg className="animate-spin h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+  <svg className="animate-spin h-8 w-8 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
   </svg>
@@ -109,22 +109,20 @@ export const FileCard: React.FC<FileCardProps> = ({ file, status, isReadOnly, on
       animate="visible"
       transition={{ duration: 0.2 }}
       className={clsx(
-        "group relative rounded-xl border bg-white dark:bg-gray-800/50",
-        "transition-all duration-200 cursor-pointer h-52 w-full",
-        "p-4 flex flex-col", // Make the root element the flex container
+        "group relative rounded-xl border bg-card text-card-foreground",
+        "transition-all duration-200 cursor-pointer h-52 w-full p-4 flex flex-col",
         {
-          "border-blue-500 ring-2 ring-blue-500": isSelected,
-          "ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-gray-900": !isSelected && isOver && file.isFolder,
-          "border-gray-200 dark:border-gray-800": !isSelected && !(isOver && file.isFolder),
+          "border-primary ring-1 ring-primary": isSelected,
+          "ring-1 ring-primary ring-offset-2": !isSelected && isOver && file.isFolder,
+          "border-border": !isSelected && !(isOver && file.isFolder),
           "cursor-grab": !isDragging,
           "opacity-40": isDragging,
         }
       )}
     >
-
       {/* It's the first child of the relative parent, ensuring it covers everything below it. */}
       {isLoading && (
-        <div className="absolute inset-0 z-10 bg-white/70 dark:bg-gray-900/70 flex items-center justify-center rounded-xl backdrop-blur-sm">
+        <div className="absolute inset-0 z-10 bg-background/70 flex items-center justify-center rounded-xl backdrop-blur-sm">
           <Spinner />
         </div>
       )}
@@ -139,19 +137,19 @@ export const FileCard: React.FC<FileCardProps> = ({ file, status, isReadOnly, on
       {/* Header Section (Icon and Actions) */}
       <div className="flex-shrink-0">
         <div className="flex justify-between items-start mb-4">
-          <div className="w-10 h-10 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-lg">
+          <div className="w-10 h-10 flex items-center justify-center bg-secondary rounded-lg">
             {isFolder ? (
-              <Folder className="w-6 h-6 text-blue-500" />
+              <Folder className="w-6 h-6 text-primary" />
             ) : (
-              <FileText className="w-6 h-6 text-gray-500" />
+              <FileText className="w-6 h-6 text-muted-foreground" />
             )}
           </div>
           {!isReadOnly && (
             <div className="absolute top-2 right-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <MoreVertical className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                  <button className="p-1.5 rounded-full hover:bg-muted opacity-0 group-hover:opacity-100 transition-opacity">
+                    <MoreVertical className="w-4 h-4 text-muted-foreground" />
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
@@ -188,7 +186,7 @@ export const FileCard: React.FC<FileCardProps> = ({ file, status, isReadOnly, on
                         <span>Rename</span>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onSelect={() => onMoveToTrash([file.id])} className="text-red-500 focus:bg-red-500 focus:text-white">
+                      <DropdownMenuItem onSelect={() => onMoveToTrash([file.id])} className="text-destructive focus:bg-destructive focus:text-primary-foreground">
                         <Trash2 className="mr-2 h-4 w-4" />
                         <span>Move to Trash</span>
                       </DropdownMenuItem>
@@ -199,7 +197,7 @@ export const FileCard: React.FC<FileCardProps> = ({ file, status, isReadOnly, on
                         <RefreshCw className="mr-2 h-4 w-4" />
                         <span>Restore</span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => onDeletePermanently([file.id])} className="text-red-500 focus:bg-red-500 focus:text-white">
+                      <DropdownMenuItem onSelect={() => onDeletePermanently([file.id])} className="text-destructive focus:bg-destructive focus:text-primary-foreground">
                         <Trash2 className="mr-2 h-4 w-4" />
                         <span>Delete Permanently</span>
                       </DropdownMenuItem>
@@ -218,7 +216,7 @@ export const FileCard: React.FC<FileCardProps> = ({ file, status, isReadOnly, on
           <img
             src={file.thumbnailUrl}
             alt={file.name}
-            className="w-32 h-32 object-contain rounded-md"
+            className="w-25 h-25 object-contain rounded-md"
           />
         )}
       </div>
@@ -232,12 +230,12 @@ export const FileCard: React.FC<FileCardProps> = ({ file, status, isReadOnly, on
             onCancelRename={onCancelRename}
           />
         ) : (
-          <p className="font-semibold text-sm text-gray-800 dark:text-gray-200 truncate" title={file.name}>
+          <p className="font-semibold text-sm text-card-foreground truncate" title={file.name}>
             {file.name}
           </p>
         )}
         {!isFolder && (
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-xs text-muted-foreground mt-1">
             {formatFileSize(file.size)}
           </p>
         )}

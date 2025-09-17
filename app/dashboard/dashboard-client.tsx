@@ -3,7 +3,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import type { File as DbFile } from '@/lib/db/schema';
 
-
 import { useFileStore } from '@/lib/store/useFileStore';
 import { Sidebar } from '@/components/dashboard/layout/Sidebar';
 import { Header } from '@/components/dashboard/layout/Header';
@@ -43,14 +42,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 
-
 interface DashboardClientProps {
   initialFiles: Required<DbFile>[];
   userId: string;
 }
 
 const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles }) => {
-
   // --- ZUSTAND STORE STATE ---
   const files = useFileStore(state => state.files);
   const currentFolderId = useFileStore(state => state.currentFolderId);
@@ -93,8 +90,21 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles }) => {
   const [fileToShare, setFileToShare] = useState<Required<DbFile> | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
 
+  useEffect(() => {
+    const storedTheme = localStorage.getItem('theme');
+    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    const initialTheme = storedTheme === 'dark' || (!storedTheme && systemPrefersDark);
+    setIsDarkMode(initialTheme);
+
+    if (initialTheme) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, []);
+
   // --- COMPUTED STATE ---
-  // Memoize the filtered files to prevent re-calculating on every render
   const filteredFiles = useMemo(() => {
     return files
       .filter(file => {
@@ -104,7 +114,6 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles }) => {
         if (activeFilter === 'starred') {
           return file.isStarred && !file.isTrash;
         }
-        // For 'all', filter by current folder and ensure not in trash
         return file.parentId === currentFolderId && !file.isTrash;
       })
       .filter(file => file.name.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -115,11 +124,9 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles }) => {
     return files.some(file => file.id && selectedIds.has(file.id) && file.isFolder);
   }, [files, selectedIds]);
 
-
   // --- EVENT HANDLERS ---
   const handleFileSelect = (fileId: string, event: React.MouseEvent) => {
     event.stopPropagation();
-    // Pass the necessary, simple values to our store action.
     handleSelectionFromStore(fileId, event.ctrlKey || event.metaKey, event.shiftKey);
   };
 
@@ -317,7 +324,7 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles }) => {
         if (!res.ok) throw new Error('Failed to fetch recent files');
         const recents: Required<DbFile>[] = await res.json();
         setRecentFiles(recents);
-        
+
       } catch (error) {
         console.error('Failed to fetch recent files:', error);
       } finally {
@@ -346,13 +353,22 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles }) => {
     return () => clearTimeout(searchTimeout);
   }, [searchQuery]);
 
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [isDarkMode]);
+
   const isSearchActive = searchQuery.length > 1 && searchResults !== null;
   const isMainContentLoading = isInitialLoading;
   const hasFiles = filteredFiles.length > 0;
 
   return (
-    <div className={`flex h-screen transition-colors duration-200 ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-white text-gray-800'
-      }`}>
+    <div className="flex h-screen transition-colors duration-300 bg-background text-foreground">
       {/* ===== PERSISTENT SIDEBAR ===== */}
       <Sidebar
         activeFilter={activeFilter}
@@ -389,7 +405,7 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles }) => {
                     <Skeleton key={i} className="h-52 w-full rounded-xl" />
                   ))}
                 </div>
-                <hr className="my-8" />
+                <hr className="my-8 border-border" />
               </div>
               <FileViewLoader />
             </>
@@ -463,7 +479,7 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles }) => {
                         onShare={() => { }}
                       />
                     ) : (
-                      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg">
+                      <div className="bg-background rounded-lg shadow-lg">
                         <FileListRow
                           file={activeDragItem.data.current?.file}
                           onMove={() => { }}

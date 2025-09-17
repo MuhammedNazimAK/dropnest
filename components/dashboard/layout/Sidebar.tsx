@@ -58,7 +58,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeFilter, setActiveFilter,
 
 
   return (
-    <aside className="w-72 flex-shrink-0 bg-gray-100 dark:bg-gray-900/50 p-6 flex flex-col justify-between border-r border-gray-200 dark:border-gray-800">
+    <aside className="w-72 flex-shrink-0 bg-sidebar p-6 flex flex-col justify-between border-r border-border">
       <div>
         <div className="mb-10">
           <Logo size="md" />
@@ -69,7 +69,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeFilter, setActiveFilter,
 
           <button
             onClick={() => setIsCreating(true)}
-            className="w-full flex items-center space-x-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-800 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors"
+            className="w-full flex items-center space-x-2 px-4 py-2.5 text-sm font-medium text-foreground bg-secondary rounded-lg hover:bg-muted transition-colors"
           >
             <Plus className="h-4 w-4" />
             <span>Create Folder</span>
@@ -83,18 +83,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeFilter, setActiveFilter,
               value={newFolderName}
               onChange={(e) => setNewFolderName(e.target.value)}
               placeholder="Folder name"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-transparent rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-border bg-transparent rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               autoFocus
             />
             <div className="flex space-x-2">
-              <button type="submit" className="w-full bg-blue-600 text-white py-1.5 rounded-md text-sm hover:bg-blue-700">Create</button>
-              <button type="button" onClick={() => setIsCreating(false)} className="w-full bg-gray-200 dark:bg-gray-700 py-1.5 rounded-md text-sm">Cancel</button>
+              <button type="submit" className="w-full bg-primary text-primary-foreground py-1.5 rounded-md text-sm hover:bg-primary/90">Create</button>
+              <button type="button" onClick={() => setIsCreating(false)} className="w-full bg-secondary py-1.5 rounded-md text-sm hover:bg-muted">Cancel</button>
             </div>
           </form>
         )}
 
         <nav className="mt-10">
-          <p className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Filters</p>
+          <p className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Filters</p>
           <ul className="space-y-1">
             {navItems.map(item => (
               <li key={item.key}>
@@ -105,8 +105,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeFilter, setActiveFilter,
                     setActiveFilter(item.key as 'all' | 'starred' | 'trash');
                   }}
                   className={`flex items-center space-x-3 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors ${activeFilter === item.key
-                    ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800'
+                    ? 'bg-primary/20 text-primary'
+                    : 'text-muted-foreground hover:bg-muted'
                     }`}
                 >
                   <item.icon className="h-5 w-5" />
@@ -120,23 +120,23 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeFilter, setActiveFilter,
 
       {/* Storage Meter */}
       <div className="mt-auto">
-                <div className="px-3 py-4 bg-gray-100 dark:bg-gray-800 rounded-lg">
-                    <h3 className="text-sm font-semibold mb-2">Storage</h3>
-                    {isLoading ? (
-                        <div className="h-2 bg-gray-300 dark:bg-gray-700 rounded-full animate-pulse"></div>
-                    ) : (
-                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                            <div 
-                                className="bg-blue-600 h-2 rounded-full" 
-                                style={{ width: `${usagePercentage}%` }}
-                            ></div>
-                        </div>
-                    )}
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                        {isLoading ? 'Calculating...' : `${formatBytes(totalStorage)} of 5 GB used`}
-                    </p>
-                </div>
+        <div className="px-3 py-4 bg-secondary rounded-lg">
+          <h3 className="text-sm font-semibold mb-2">Storage</h3>
+          {isLoading ? (
+            <div className="h-2 bg-muted rounded-full animate-pulse"></div>
+          ) : (
+            <div className="w-full bg-muted rounded-full h-2">
+              <div
+                className="bg-primary h-2 rounded-full"
+                style={{ width: `${usagePercentage}%` }}
+              ></div>
             </div>
-        </aside>
+          )}
+          <p className="text-xs text-muted-foreground mt-2">
+            {isLoading ? 'Calculating...' : `${formatBytes(totalStorage)} of 5 GB used`}
+          </p>
+        </div>
+      </div>
+    </aside>
   );
 };

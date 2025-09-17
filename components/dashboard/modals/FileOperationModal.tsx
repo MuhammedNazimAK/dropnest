@@ -83,12 +83,12 @@ export const FileOperationModal: React.FC<FileOperationModalProps> = ({ isOpen, 
 
     return (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center" onClick={onClose}>
-            <div className="w-full max-w-md bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6" onClick={e => e.stopPropagation()}>
-                <h2 className="text-xl font-bold">{modalTitle}</h2>
-                <div className="mt-4 h-64 overflow-y-auto border dark:border-gray-700 rounded-md p-2">
+            <div className="w-full max-w-md bg-background rounded-lg shadow-xl p-6" onClick={e => e.stopPropagation()}>
+                <h2 className="text-xl font-bold text-foreground">{modalTitle}</h2>
+                <div className="mt-4 h-64 overflow-y-auto border border-border rounded-md p-2">
                     {isLoading ? (
                         <div className="flex items-center justify-center h-full">
-                            <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+                            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
                         </div>
                     ) : (
                         <FolderTree
@@ -100,10 +100,14 @@ export const FileOperationModal: React.FC<FileOperationModalProps> = ({ isOpen, 
                     )}
                 </div>
                 <div className="mt-6 flex justify-end space-x-3">
-                    <button onClick={onClose} className="px-4 py-2 text-sm font-medium bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600">
+                    <button onClick={onClose} className="px-4 py-2 text-sm font-medium bg-secondary rounded-md hover:bg-muted text-foreground cursor-pointer">
                         Cancel
                     </button>
-                    <button onClick={handleConfirm} disabled={isConfirmButtonDisabled || isLoading} className="...">
+                    <button
+                        onClick={handleConfirm}
+                        disabled={isConfirmButtonDisabled || isLoading}
+                        className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    >
                         {confirmButtonText}
                     </button>
                 </div>

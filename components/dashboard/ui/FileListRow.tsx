@@ -99,19 +99,18 @@ export const FileListRow: React.FC<FileListRowProps> = ({ renamingId, onShare, o
             transition={{ duration: 0.3 }}
             className={clsx(
                 "group grid grid-cols-12 gap-4 items-center w-full px-4 py-2 rounded-lg transition-colors duration-150 cursor-pointer",
-                { "border-blue-500 ring-2 ring-blue-500": isSelected }, // Style for selected items
-                { "border-gray-200 dark:border-gray-800": !isSelected },
+                { "border-primary ring-1 ring-primary": isSelected }, // Changed to use ring instead of border
                 // Apply styles for dragging state
                 { "opacity-40": isDragging },
                 // Apply a ring for a valid drop target (folders only)
-                { "ring-2 ring-blue-500": isOver && file.isFolder },
+                { "ring-1 ring-primary": isOver && file.isFolder },
                 // Only apply the hover effect when NOT dragging
-                { "hover:bg-gray-100 dark:hover:bg-gray-800/80": !isDragging }
+                { "hover:bg-muted": !isDragging }
             )}
         >
 
             {status === 'loading' && (
-                <div className="absolute inset-0 z-10 bg-white/70 dark:bg-gray-900/70 flex items-center justify-center rounded-lg backdrop-blur-sm">
+                <div className="absolute inset-0 z-10 bg-background/70 flex items-center justify-center rounded-lg backdrop-blur-sm">
                     {/* You can add a smaller spinner here if you like */}
                     <p className="text-sm font-semibold">Processing...</p>
                 </div>
@@ -119,7 +118,7 @@ export const FileListRow: React.FC<FileListRowProps> = ({ renamingId, onShare, o
 
             {/* Name & Icon */}
             <div className="col-span-6 flex items-center space-x-4">
-                {isFolder ? <Folder className="w-5 h-5 text-blue-500 flex-shrink-0" /> : <FileText className="w-5 h-5 text-gray-500 flex-shrink-0" />}
+                {isFolder ? <Folder className="w-5 h-5 text-primary flex-shrink-0" /> : <FileText className="w-5 h-5 text-muted-foreground flex-shrink-0" />}
                 {renamingId === file.id ? (
                     <RenameInput
                         currentName={file.name}
@@ -127,7 +126,7 @@ export const FileListRow: React.FC<FileListRowProps> = ({ renamingId, onShare, o
                         onCancelRename={onCancelRename}
                     />
                 ) : (
-                    <span className="font-medium text-sm text-gray-800 dark:text-gray-200 truncate" title={file.name}>
+                    <span className="font-medium text-sm text-card-foreground truncate" title={file.name}>
                         {file.name}
                     </span>
                 )}
@@ -135,12 +134,12 @@ export const FileListRow: React.FC<FileListRowProps> = ({ renamingId, onShare, o
             </div>
 
             {/* Size */}
-            <div className="col-span-2 text-sm text-gray-600 dark:text-gray-400">
+            <div className="col-span-2 text-sm text-muted-foreground">
                 {formatFileSize(file.size)}
             </div>
 
             {/* Last Modified */}
-            <div className="col-span-3 text-sm text-gray-600 dark:text-gray-400">
+            <div className="col-span-3 text-sm text-muted-foreground">
                 {format(new Date(file.updatedAt), 'MMM d, yyyy')}
             </div>
 
@@ -148,8 +147,8 @@ export const FileListRow: React.FC<FileListRowProps> = ({ renamingId, onShare, o
             <div className="col-span-1 flex justify-end">
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <button className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <MoreVertical className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                        <button className="p-2 rounded-full hover:bg-muted opacity-0 group-hover:opacity-100 transition-opacity">
+                            <MoreVertical className="w-4 h-4 text-muted-foreground" />
                         </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
@@ -187,7 +186,7 @@ export const FileListRow: React.FC<FileListRowProps> = ({ renamingId, onShare, o
                                     <span>Rename</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem onSelect={() => onMoveToTrash([file.id])} className="text-red-500 focus:bg-red-500 focus:text-white">
+                                <DropdownMenuItem onSelect={() => onMoveToTrash([file.id])} className="text-destructive focus:bg-destructive focus:text-primary-foreground">
                                     <Trash2 className="mr-2 h-4 w-4" />
                                     <span>Move to Trash</span>
                                 </DropdownMenuItem>
@@ -199,7 +198,7 @@ export const FileListRow: React.FC<FileListRowProps> = ({ renamingId, onShare, o
                                     <RefreshCw className="mr-2 h-4 w-4" />
                                     <span>Restore</span>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onSelect={() => onDeletePermanently([file.id])} className="text-red-500 focus:bg-red-500 focus:text-white">
+                                <DropdownMenuItem onSelect={() => onDeletePermanently([file.id])} className="text-destructive focus:bg-destructive focus:text-primary-foreground">
                                     <Trash2 className="mr-2 h-4 w-4" />
                                     <span>Delete Permanently</span>
                                 </DropdownMenuItem>

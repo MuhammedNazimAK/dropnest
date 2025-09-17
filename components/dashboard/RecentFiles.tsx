@@ -13,13 +13,13 @@ export const RecentFiles = ({ files, onFilePreview }: RecentFilesProps) => {
     if (!files || files.length === 0) {
         return (
             <div className="mt-8">
-                <h2 className="text-lg font-semibold mb-4">Suggested for you</h2>
-                <div className="text-center p-8 bg-gray-50 dark:bg-gray-800/20 rounded-xl">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                <h2 className="text-lg font-semibold mb-4 text-foreground">Suggested for you</h2>
+                <div className="text-center p-8 bg-muted/50 rounded-xl">
+                    <p className="text-sm text-muted-foreground">
                         As you use DropNest, recently viewed files will automatically show up here.
                     </p>
                 </div>
-                <hr className="my-8" />
+                <hr className="my-8 border-border" />
             </div>
         );
     }
@@ -27,7 +27,7 @@ export const RecentFiles = ({ files, onFilePreview }: RecentFilesProps) => {
     // --- Content State ---
     return (
         <div className="mt-8">
-            <h2 className="text-lg font-semibold mb-4">Recent</h2>
+            <h2 className="text-lg font-semibold mb-4 text-foreground">Recent</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 {files.map(file => (
                     <div key={file.id} onClick={() => onFilePreview(file)}>
@@ -54,7 +54,7 @@ export const RecentFiles = ({ files, onFilePreview }: RecentFilesProps) => {
                     </div>
                 ))}
             </div>
-            <hr className="my-8" />
+            <hr className="my-8 border-border" />
         </div>
     );
 };

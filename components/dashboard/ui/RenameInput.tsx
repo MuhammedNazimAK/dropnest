@@ -43,7 +43,7 @@ export const RenameInput: React.FC<RenameInputProps> = ({ currentName, onConfirm
             onBlur={() => onConfirmRename(name.trim())} // Save when clicking away
             onKeyDown={handleKeyDown}
             onClick={(e) => e.stopPropagation()}
-            className="w-full text-sm font-semibold bg-blue-100 dark:bg-blue-900/50 p-1 rounded-md border border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full text-sm font-semibold bg-primary/20 p-1 rounded-md border border-primary focus:outline-none focus:ring-2 focus:ring-primary"
         />
     );
 };

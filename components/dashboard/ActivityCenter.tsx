@@ -10,20 +10,20 @@ const UploadItem: React.FC<{ task: UploadTask }> = ({ task }) => {
 
     switch (task.status) {
         case 'uploading':
-            statusIcon = <UploadCloud className="w-5 h-5 text-gray-400" />;
-            statusColor = 'bg-blue-600';
+            statusIcon = <UploadCloud className="w-5 h-5 text-muted-foreground" />;
+            statusColor = 'bg-primary';
             break;
         case 'processing':
-            statusIcon = <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />;
-            statusColor = 'bg-blue-600';
+            statusIcon = <Loader2 className="w-5 h-5 text-primary animate-spin" />;
+            statusColor = 'bg-primary';
             break;
         case 'success':
             statusIcon = <CheckCircle className="w-5 h-5 text-green-500" />;
             statusColor = 'bg-green-500';
             break;
         case 'error':
-            statusIcon = <AlertCircle className="w-5 h-5 text-red-500" />;
-            statusColor = 'bg-red-500';
+            statusIcon = <AlertCircle className="w-5 h-5 text-destructive" />;
+            statusColor = 'bg-destructive';
             break;
     }
 
@@ -32,10 +32,10 @@ const UploadItem: React.FC<{ task: UploadTask }> = ({ task }) => {
             <div className="flex-shrink-0">{statusIcon}</div>
             <div className="flex-grow min-w-0">
                 <div className="flex justify-between items-center">
-                    <p className="text-sm font-semibold truncate">{task.file.name}</p>
+                    <p className="text-sm font-semibold truncate text-foreground">{task.file.name}</p>
                     <div className="flex-shrink-0">{statusIcon}</div>
                 </div>
-                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mt-1">
+                <div className="w-full bg-muted rounded-full h-1.5 mt-1">
                     <div className={`h-1.5 rounded-full ${statusColor}`} style={{ width: `${task.progress}%` }} />
                 </div>
             </div>
@@ -47,16 +47,16 @@ const OperationItem: React.FC<{ task: OperationTask }> = ({ task }) => {
     let statusIcon, statusColor, operationIcon, operationText;
 
     switch (task.type) {
-        case 'move': operationIcon = <Move className="w-5 h-5 text-gray-500" />; operationText = `Moving ${task.itemCount} items`; break;
-        case 'trash': operationIcon = <Trash2 className="w-5 h-5 text-gray-500" />; operationText = `Trashing ${task.itemCount} items`; break;
-        case 'copy': operationIcon = <Copy className="w-5 h-5 text-gray-500" />; operationText = `Copying ${task.itemCount} items`; break;
-        case 'delete': operationIcon = <DeleteIcon className="w-5 h-5 text-gray-500" />; operationText = `Deleting ${task.itemCount} items`; break;
+        case 'move': operationIcon = <Move className="w-5 h-5 text-muted-foreground" />; operationText = `Moving ${task.itemCount} items`; break;
+        case 'trash': operationIcon = <Trash2 className="w-5 h-5 text-muted-foreground" />; operationText = `Trashing ${task.itemCount} items`; break;
+        case 'copy': operationIcon = <Copy className="w-5 h-5 text-muted-foreground" />; operationText = `Copying ${task.itemCount} items`; break;
+        case 'delete': operationIcon = <DeleteIcon className="w-5 h-5 text-muted-foreground" />; operationText = `Deleting ${task.itemCount} items`; break;
     }
 
     switch (task.status) {
-        case 'in-progress': statusIcon = <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />; statusColor = 'bg-blue-600'; break;
+        case 'in-progress': statusIcon = <Loader2 className="w-5 h-5 text-primary animate-spin" />; statusColor = 'bg-primary'; break;
         case 'success': statusIcon = <CheckCircle className="w-5 h-5 text-green-500" />; statusColor = 'bg-green-500'; break;
-        case 'error': statusIcon = <AlertCircle className="w-5 h-5 text-red-500" />; statusColor = 'bg-red-500'; break;
+        case 'error': statusIcon = <AlertCircle className="w-5 h-5 text-destructive" />; statusColor = 'bg-destructive'; break;
     }
 
     return (
@@ -64,10 +64,10 @@ const OperationItem: React.FC<{ task: OperationTask }> = ({ task }) => {
             <div className="flex-shrink-0">{operationIcon}</div>
             <div className="flex-grow min-w-0">
                 <div className="flex justify-between items-center">
-                    <p className="text-sm font-semibold truncate">{operationText}</p>
+                    <p className="text-sm font-semibold truncate text-foreground">{operationText}</p>
                     <div className="flex-shrink-0">{statusIcon}</div>
                 </div>
-                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mt-1">
+                <div className="w-full bg-muted rounded-full h-1.5 mt-1">
                     <div className={`h-1.5 rounded-full ${statusColor}`} style={{ width: `${task.progress}%` }} />
                 </div>
             </div>
@@ -97,11 +97,11 @@ export const ActivityCenter = () => {
     const allTasksAreComplete = completedCount > 0 && completedCount === allTasks.length;
 
     return (
-        <div className="fixed bottom-4 right-4 w-80 bg-white dark:bg-gray-800 shadow-2xl rounded-lg border dark:border-gray-700 z-50">
-            <div className="p-3 border-b dark:border-gray-700 flex justify-between items-center">
-                <h3 className="text-sm font-semibold">Activity</h3>
+        <div className="fixed bottom-4 right-4 w-80 bg-background shadow-2xl rounded-lg border border-border z-50">
+            <div className="p-3 border-b border-border flex justify-between items-center">
+                <h3 className="text-sm font-semibold text-foreground">Activity</h3>
                 {allTasksAreComplete && (
-                    <button onClick={clearCompletedTasks} className="text-xs text-blue-500 hover:underline">Clear Completed</button>
+                    <button onClick={clearCompletedTasks} className="text-xs text-primary hover:underline">Clear Completed</button>
                 )}
             </div>
             <div className="p-3 space-y-3 max-h-64 overflow-y-auto">

@@ -39,7 +39,7 @@ const Notification: React.FC<NotificationProps> = ({ type, message, onClose }) =
         </div>
         <button
           onClick={onClose}
-          className="flex-shrink-0 ml-2 text-gray-400 hover:text-gray-600"
+          className="flex-shrink-0 ml-2 text-muted-foreground hover:text-foreground"
         >
           <X className="w-4 h-4" />
         </button>

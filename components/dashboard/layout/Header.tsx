@@ -18,7 +18,7 @@ interface HeaderProps {
   setViewMode: (mode: 'grid' | 'list') => void;
   isDarkMode: boolean;
   setIsDarkMode: (isDark: boolean) => void;
-  activeFilter: 'all' | 'starred' | 'trash'; // Add this
+  activeFilter: 'all' | 'starred' | 'trash';
   onEmptyTrash: () => void;
   disableEmptyTrash: boolean;
 }
@@ -39,24 +39,24 @@ export const Header: React.FC<HeaderProps> = ({
   const { isLoaded } = useUser();
 
   return (
-    <header className="flex-shrink-0 h-20 px-6 md:px-8 flex items-center justify-between border-b border-gray-200 dark:border-gray-800 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm sticky top-0 z-10">
+    <header className="flex-shrink-0 h-20 px-6 md:px-8 flex items-center justify-between border-b border-border bg-background/50 backdrop-blur-sm sticky top-0 z-10">
       {/* Breadcrumbs */}
-      <nav className="flex items-center text-sm font-medium text-gray-600 dark:text-gray-400">
+      <nav className="flex items-center text-sm font-medium text-muted-foreground">
         {breadcrumbs.map((crumb, index) => (
           <div key={crumb.id || 'root'} className="flex items-center">
             <button
               onClick={() => onNavigateToBreadcrumb(index)}
               disabled={index === breadcrumbs.length - 1}
               className={`flex items-center space-x-2 p-2 rounded-lg transition-colors ${index === breadcrumbs.length - 1
-                ? 'text-gray-900 dark:text-white font-semibold cursor-default'
-                : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                ? 'text-foreground font-semibold cursor-default'
+                : 'hover:bg-muted'
                 }`}
             >
               {index === 0 && <Home className="h-4 w-4" />}
               <span className="truncate max-w-28 md:max-w-48">{crumb.name}</span>
             </button>
             {index < breadcrumbs.length - 1 && (
-              <ChevronRight className="h-4 w-4 text-gray-400 dark:text-gray-600 mx-1" />
+              <ChevronRight className="h-4 w-4 text-muted-foreground mx-1" />
             )}
           </div>
         ))}
@@ -66,14 +66,14 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Controls */}
       <div className="flex items-center space-x-2 md:space-x-4">
         {activeFilter === 'trash' && (
-          <Button 
+          <Button
             variant="destructive"
             size="sm"
             onClick={onEmptyTrash}
             disabled={disableEmptyTrash}
           >
             Empty Trash
-          </Button >
+          </Button>
         )}
         <div className="w-48 md:w-64">
           <SearchInput
@@ -85,18 +85,16 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* View Toggle */}
-        <div className="hidden sm:flex items-center p-1 bg-gray-100 dark:bg-gray-800 rounded-lg">
-          <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-white dark:bg-gray-700 text-blue-600' : 'text-gray-500 hover:text-gray-800 dark:hover:text-white'}`}>
+        <div className="hidden sm:flex items-center p-1 bg-secondary rounded-lg">
+          <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-background text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
             <Grid className="h-5 w-5" />
           </button>
-          <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md transition-colors ${viewMode === 'list' ? 'bg-white dark:bg-gray-700 text-blue-600' : 'text-gray-500 hover:text-gray-800 dark:hover:text-white'}`}>
+          <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md transition-colors ${viewMode === 'list' ? 'bg-background text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
             <List className="h-5 w-5" />
           </button>
         </div>
 
         <ThemeToggle isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} />
-
-
 
         {/* User Profile using Clerk's managed component */}
         <div className="h-9 w-9 flex items-center justify-center">

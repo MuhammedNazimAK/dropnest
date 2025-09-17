@@ -67,7 +67,7 @@ export const FileView: React.FC<FileViewProps> = (props) => {
             isSelected={selectedIds.has(file.id)}
             onSelect={(event) => onFileSelect(file.id, event)}
             onDoubleClick={() => onDoubleClick(file)}
-            status={fileStatuses[file.id]} 
+            status={fileStatuses[file.id]}
           />
         ))}
       </div>
@@ -78,7 +78,7 @@ export const FileView: React.FC<FileViewProps> = (props) => {
     return (
       <div className="space-y-1">
         {/* Header Row */}
-        <div className="grid grid-cols-12 gap-4 px-4 py-2 text-xs font-semibold text-gray-500 uppercase border-b border-gray-200 dark:border-gray-800">
+        <div className="grid grid-cols-12 gap-4 px-4 py-2 text-xs font-semibold text-muted-foreground uppercase border-b border-border">
           <div className="col-span-5 md:col-span-6">Name</div>
           <div className="col-span-3 md:col-span-2">Size</div>
           <div className="col-span-4 md:col-span-3">Last Modified</div>

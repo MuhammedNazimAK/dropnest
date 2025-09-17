@@ -183,8 +183,8 @@ export default function SignInForm({ onClose, isModal = false, setShowModal }: S
             type="submit"
             disabled={isSubmitting}
             className={`w-full py-3 px-4 font-medium rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 text-sm ${isModal
-                ? 'bg-gradient-to-r from-blue-500 to-gray-700 text-white focus:ring-blue-500'
-                : 'bg-black text-white focus:ring-black'
+              ? 'bg-gradient-to-r from-blue-500 to-gray-700 text-white focus:ring-blue-500'
+              : 'bg-black text-white focus:ring-black'
               }`}
           >
             {isSubmitting ? (
@@ -217,18 +217,20 @@ export default function SignInForm({ onClose, isModal = false, setShowModal }: S
         )}
 
         {/* Modal Footer */}
-        <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600">
-            Need a fresh account?{" "}
-            <button
-              type="button"
-              onClick={() => setShowModal?.({ type: 'signup', isOpen: true })}
-              className="font-medium text-blue-600 underline underline-offset-2 decoration-1"
-            >
-              Create account instead
-            </button>
-          </p>
-        </div>
+        {isModal && (
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600">
+              Need a fresh account?{" "}
+              <button
+                type="button"
+                onClick={() => setShowModal?.({ type: 'signup', isOpen: true })}
+                className="font-medium text-blue-600 underline underline-offset-2 decoration-1"
+              >
+                Create account instead
+              </button>
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

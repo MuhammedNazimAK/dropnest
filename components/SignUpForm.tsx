@@ -368,18 +368,20 @@ export default function SignUpForm({ isModal = false, setShowModal, onClose }: S
         )}
 
         {/* Modal Footer */}
-        <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600">
-            Already have an account?{" "}
-            <button
-              type="button"
-              onClick={() => setShowModal?.({ type: 'signin', isOpen: true })}
-              className="font-medium text-blue-600 underline underline-offset-2 decoration-1"
-            >
-              Sign in instead
-            </button>
-          </p>
-        </div>
+        {isModal && (
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600">
+              Already have an account?{" "}
+              <button
+                type="button"
+                onClick={() => setShowModal?.({ type: 'signin', isOpen: true })}
+                className="font-medium text-blue-600 underline underline-offset-2 decoration-1"
+              >
+                Sign in instead
+              </button>
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

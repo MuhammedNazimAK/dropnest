@@ -19,7 +19,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({ file, onClose }) => {
     if (file) {
       setIsLoading(true);
       setHasCopied(false); // Reset copy status when file changes
-      
+
       // Fetch the shareable link from API
       fetch(`/api/files/${file.id}/share`, { method: 'POST' })
         .then(res => res.json())
@@ -47,35 +47,35 @@ export const ShareModal: React.FC<ShareModalProps> = ({ file, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center" onClick={onClose}>
-      <div className="w-full max-w-md bg-white dark:bg-gray-800 rounded-lg shadow-xl" onClick={e => e.stopPropagation()}>
-        <header className="p-4 border-b dark:border-gray-700 flex justify-between items-center">
-          <h2 className="text-lg font-semibold truncate">Share &quot;{file.name}&quot;</h2>
-          <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
-            <X className="w-5 h-5" />
+      <div className="w-full max-w-md bg-background rounded-lg shadow-xl" onClick={e => e.stopPropagation()}>
+        <header className="p-4 border-b border-border flex justify-between items-center">
+          <h2 className="text-lg font-semibold truncate text-foreground">Share &quot;{file.name}&quot;</h2>
+          <button onClick={onClose} className="p-1 rounded-full hover:bg-accent">
+            <X className="w-5 h-5 text-foreground" />
           </button>
         </header>
         <div className="p-6">
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+          <p className="text-sm text-muted-foreground mb-4">
             Anyone with the link can view this file.
           </p>
           {isLoading ? (
             <div className="flex items-center justify-center h-12">
-              <Loader2 className="w-6 h-6 animate-spin" />
+              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
             </div>
           ) : (
             <div className="flex items-center space-x-2">
               <div className="relative flex-grow">
-                <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
                   type="text"
                   readOnly
                   value={shareUrl}
-                  className="w-full bg-gray-100 dark:bg-gray-700 border-transparent rounded-md pl-10 pr-4 py-2 text-sm"
+                  className="w-full bg-secondary border-transparent rounded-md pl-10 pr-4 py-2 text-sm text-foreground"
                 />
               </div>
               <button
                 onClick={handleCopy}
-                className="flex-shrink-0 bg-blue-600 text-white font-semibold px-4 py-2 rounded-md hover:bg-blue-700 flex items-center"
+                className="flex-shrink-0 bg-primary text-primary-foreground font-semibold px-4 py-2 rounded-md hover:bg-primary/90 flex items-center cursor-pointer"
               >
                 {hasCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                 <span className="ml-2">{hasCopied ? 'Copied!' : 'Copy'}</span>

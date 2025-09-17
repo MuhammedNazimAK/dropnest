@@ -12,7 +12,6 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    console.log('request json', request.json());
     const { fileId } = await request.json();
     console.log("fileidasdfasdfasdaf", fileId)
 

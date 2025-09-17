@@ -39,12 +39,12 @@ const TextPreview = ({ fileUrl }: { fileUrl: string }) => {
   }, [fileUrl]);
 
   if (loading) {
-    return <div className="p-4 text-gray-400">Loading preview...</div>;
+    return <div className="p-4 text-muted-foreground">Loading preview...</div>;
   }
 
   // <pre> tag to preserve whitespace and line breaks from the text file
   return (
-    <pre className="text-left p-4 bg-gray-900 text-white whitespace-pre-wrap break-words w-full h-full overflow-auto">
+    <pre className="text-left p-4 bg-card text-foreground whitespace-pre-wrap break-words w-full h-full overflow-auto">
       {content}
     </pre>
   );
@@ -83,26 +83,26 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ file, onClos
       onClick={onClose}
     >
       <div
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col"
+        className="bg-background rounded-lg shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <header className="flex-shrink-0 p-3 border-b dark:border-gray-700 flex justify-between items-center">
+        <header className="flex-shrink-0 p-3 border-b border-border flex justify-between items-center">
           <div className="flex items-center space-x-2 min-w-0">
-            <FileIcon className="w-5 h-5 text-gray-500 flex-shrink-0" />
-            <p className="font-semibold truncate" title={file.name}>{file.name}</p>
+            <FileIcon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+            <p className="font-semibold truncate text-foreground" title={file.name}>{file.name}</p>
           </div>
           <div className="flex items-center space-x-2">
-            <a href={file.fileUrl} download={file.name} target="_blank" rel="noopener noreferrer" className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700" title="Download">
-              <Download className="w-5 h-5" />
+            <a href={file.fileUrl} download={file.name} target="_blank" rel="noopener noreferrer" className="p-2 rounded-full hover:bg-muted" title="Download">
+              <Download className="w-5 h-5 text-foreground" />
             </a>
-            <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700" title="Close">
-              <X className="w-5 h-5" />
+            <button onClick={onClose} className="p-2 rounded-full hover:bg-muted" title="Close">
+              <X className="w-5 h-5 text-foreground" />
             </button>
           </div>
         </header>
 
         {/* --- MODAL BODY (Conditional Viewer) --- */}
-        <main className="flex-grow bg-gray-50 dark:bg-gray-900/50 flex items-center justify-center overflow-hidden">
+        <main className="flex-grow bg-muted/50 flex items-center justify-center overflow-hidden">
           {fileType === 'pdf' && (
             <embed src={file.fileUrl} type="application/pdf" className="w-full h-full" />
           )}
@@ -120,11 +120,11 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ file, onClos
           {fileType === 'other' && (
             <div className="text-center p-8">
               <AlertTriangle className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold">No Preview Available</h3>
-              <p className="text-gray-500 mt-2">
+              <h3 className="text-xl font-semibold text-foreground">No Preview Available</h3>
+              <p className="text-muted-foreground mt-2">
                 A preview is not available for this file type.
               </p>
-              <a href={file.fileUrl} download={file.name} target="_blank" rel="noopener noreferrer" className="mt-6 inline-block bg-blue-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-blue-700">
+              <a href={file.fileUrl} download={file.name} target="_blank" rel="noopener noreferrer" className="mt-6 inline-block bg-primary text-primary-foreground font-semibold px-6 py-2 rounded-lg hover:bg-primary/90">
                 Download &quot;{file.name}&quot;
               </a>
             </div>
