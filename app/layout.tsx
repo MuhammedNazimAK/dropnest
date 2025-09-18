@@ -3,6 +3,7 @@ import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Providers } from "./providers";
 import { NotificationProvider } from "@/contexts/NotificationContext";
+import { Analytics } from '@vercel/analytics/next';
 
 import localFont from "next/font/local";
 const geistSans = localFont({
@@ -33,6 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
             <Providers>
               {children}
+              <Analytics />
             </Providers>
           </body>
         </html>

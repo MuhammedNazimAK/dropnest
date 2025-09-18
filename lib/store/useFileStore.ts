@@ -48,6 +48,7 @@ interface FileStoreState {
     navigateToBreadcrumb: (index: number) => void;
 
     refreshFiles: (folderId?: string | null) => Promise<void>;
+    isLoading: boolean;
 
     toggleStar: (fileIds: string[]) => Promise<void>;
     moveToTrash: (fileIds: string[]) => Promise<void>;
@@ -74,6 +75,7 @@ interface FileStoreState {
 const createFileSlice: StateCreator<FileStoreState> = (set, get) => ({
 
     files: [],
+    isLoading: true,
     currentFolderId: null,
     breadcrumbs: [{ id: null, name: 'Home' }],
     fileStatuses: {},
@@ -85,7 +87,7 @@ const createFileSlice: StateCreator<FileStoreState> = (set, get) => ({
     activeFilter: 'all',
 
     // --- CORE STATE MANAGEMENT ---
-    initializeFiles: (files) => set({ files }),
+    initializeFiles: (files) => set({ files, isLoading: false }),
 
     setFileStatus: (fileIds, status) => {
         set(state => {
@@ -122,17 +124,12 @@ const createFileSlice: StateCreator<FileStoreState> = (set, get) => ({
             lastSelectedId: null,
         }));
 
-        try {
-            await refreshFiles(folderId);
-        } catch (error) {
-            console.error("Failed to load folder contents:", error);
-        }
+        await refreshFiles(folderId);
     },
 
     navigateToBreadcrumb: async (index) => {
 
         const { refreshFiles, breadcrumbs } = get();
-
         const newBreadcrumbs = breadcrumbs.slice(0, index + 1);
         const newFolderId = newBreadcrumbs[index].id;
 
@@ -143,11 +140,7 @@ const createFileSlice: StateCreator<FileStoreState> = (set, get) => ({
             lastSelectedId: null,
         });
 
-        try {
-            await refreshFiles(newFolderId);
-        } catch (error) {
-            console.error("Failed to load folder contents:", error);
-        }
+        await refreshFiles(newFolderId);
     },
 
     buildBreadcrumbs: async (folderId: string) => {
@@ -179,16 +172,18 @@ const createFileSlice: StateCreator<FileStoreState> = (set, get) => ({
         const { currentFolderId } = get();
         const targetFolderId = folderId !== undefined ? folderId : currentFolderId;
 
+        set({ isLoading: true });
+
         try {
             const parentIdQuery = targetFolderId || 'root';
             const response = await fetch(`/api/files?parentId=${parentIdQuery}&active=true`);
+            if (!response.ok) { throw new Error('API request failed'); }
 
-            if (response.ok) {
-                const data = await response.json();
-                set({ files: data.files || [] });
-            }
+            const data = await response.json();
+            set({ files: data.files || [], isLoading: false });
         } catch (error) {
             console.error('Failed to refresh files:', error);
+            set({ isLoading: false });
             throw error;
         }
     },

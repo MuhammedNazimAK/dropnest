@@ -44,10 +44,11 @@ import {
 
 interface DashboardClientProps {
   initialFiles: Required<DbFile>[];
+  initialRecentFiles: Required<DbFile>[];
   userId: string;
 }
 
-const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles }) => {
+const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles, initialRecentFiles }) => {
   // --- ZUSTAND STORE STATE ---
   const files = useFileStore(state => state.files);
   const currentFolderId = useFileStore(state => state.currentFolderId);
@@ -70,6 +71,7 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles }) => {
   const createFolder = useFileStore(state => state.createFolder);
   const renameItem = useFileStore(state => state.renameItem);
   const emptyTrash = useFileStore(state => state.emptyTrash);
+  const isLoading = useFileStore(state => state.isLoading);
 
   // --- LOCAL UI STATE ---
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -78,7 +80,6 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles }) => {
   const [searchResults, setSearchResults] = useState<DbFile[] | null>(null);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [activeDragItem, setActiveDragItem] = useState<Active | null>(null);
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [recentFiles, setRecentFiles] = useState<Required<DbFile>[] | null>(null);
   const [isDeleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [isEmptyTrashConfirmOpen, setEmptyTrashConfirmOpen] = useState(false);
@@ -216,15 +217,11 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles }) => {
     }
   };
 
-  const handleDoubleClick = (item: Required<DbFile>) => {
+  const handleItemActivate = (item: Required<DbFile>) => {
     clearSelection();
 
     if (item.isFolder) {
       navigateToFolder(item.id, item.name);
-      if (searchQuery.length > 0) {
-        setSearchQuery('');
-        setSearchResults(null);
-      }
     } else {
       setFileToPreview(item);
     }
@@ -313,27 +310,12 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles }) => {
     }
   };
 
-  // --- EFFECTS ---
   useEffect(() => {
+
     initializeFiles(initialFiles);
+    setRecentFiles(initialRecentFiles);
 
-    const fetchData = async () => {
-      try {
-        await new Promise(resolve => setTimeout(resolve, 800));
-        const res = await fetch('/api/files/recent');
-        if (!res.ok) throw new Error('Failed to fetch recent files');
-        const recents: Required<DbFile>[] = await res.json();
-        setRecentFiles(recents);
-
-      } catch (error) {
-        console.error('Failed to fetch recent files:', error);
-      } finally {
-        setIsInitialLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [initialFiles, initializeFiles]);
+  }, [initialFiles, initializeFiles, initialRecentFiles]);
 
   useEffect(() => {
     const searchTimeout = setTimeout(async () => {
@@ -364,7 +346,6 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles }) => {
   }, [isDarkMode]);
 
   const isSearchActive = searchQuery.length > 1 && searchResults !== null;
-  const isMainContentLoading = isInitialLoading;
   const hasFiles = filteredFiles.length > 0;
 
   return (
@@ -396,19 +377,23 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles }) => {
         />
 
         <main className="flex-1 overflow-y-auto p-6 max-w-8xl mx-auto w-full">
-          {isMainContentLoading ? (
-            <>
-              <div className='mt-8'>
-                <h2 className="text-lg font-semibold mb-4">Recent</h2>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Skeleton key={i} className="h-52 w-full rounded-xl" />
-                  ))}
+          {isLoading ? (
+            breadcrumbs.length <= 1 ? (
+              <>
+                <div className='mt-8'>
+                  <h2 className="text-lg font-semibold mb-4">Recent</h2>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Skeleton key={i} className="h-52 w-full rounded-xl" />
+                    ))}
+                  </div>
+                  <hr className="my-8 border-border" />
                 </div>
-                <hr className="my-8 border-border" />
-              </div>
+                <FileViewLoader />
+              </>
+            ) : (
               <FileViewLoader />
-            </>
+            )
           ) : (
             <>
               {breadcrumbs.length === 1 && activeFilter === 'all' && (
@@ -440,7 +425,7 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles }) => {
                   activeFilter={activeFilter}
                   onToggleStar={handleBulkToggleStar}
                   onMoveToTrash={moveToTrash}
-                  onFolderOpen={handleDoubleClick}
+                  onFolderOpen={handleItemActivate}
                   onRestoreFile={restoreFile}
                   onDeletePermanently={deleteFilePermanently}
                   onRename={renameItem}
@@ -453,8 +438,8 @@ const DashboardClient: React.FC<DashboardClientProps> = ({ initialFiles }) => {
                   onStartRename={handleStartRename}
                   onConfirmRename={handleConfirmRename}
                   onCancelRename={handleCancelRename}
-                  onDoubleClick={handleDoubleClick}
                   onShare={(file) => setFileToShare(file)}
+                  onDoubleClick={handleItemActivate}
                 />
                 <DragOverlay>
                   {activeDragItem ? (

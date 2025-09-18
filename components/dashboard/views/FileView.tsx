@@ -53,7 +53,6 @@ export const FileView: React.FC<FileViewProps> = (props) => {
     return <EmptyState {...messages[activeFilter]} onUploadClick={onUploadClick} />;
   }
 
-  // Pass all props down to the children
   const childProps = { ...props };
 
   if (viewMode === 'grid') {

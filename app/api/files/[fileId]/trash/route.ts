@@ -4,22 +4,20 @@ import { auth } from "@clerk/nextjs/server";
 import { eq, and } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
-export async function PATCH(request: NextRequest) {
-  console.log('reached move to trash')
+export async function PATCH(_request: NextRequest, { params }: { params: Promise<{ fileId: string }> }) {
+
   try {
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { fileId } = await request.json();
-    console.log("fileidasdfasdfasdaf", fileId)
+    const { fileId } = await params;
 
     if (!fileId) {
       return NextResponse.json({ error: "File ID is required" }, { status: 400 });
     }
 
-    // Find the file
     const [file] = await db.select()
       .from(files)
       .where(
@@ -33,7 +31,6 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "File not found" }, { status: 404 });
     }
 
-    // Move to trash (set isTrash to true)
     const [updatedFile] = await db.update(files)
       .set({
         isTrash: true,

@@ -5,6 +5,7 @@ import { auth } from "@clerk/nextjs/server";
 import { and, eq } from "drizzle-orm";
 import ImageKit from "imagekit";
 import { NextRequest, NextResponse } from "next/server";
+import { lookup } from 'mime-types';
 
 const imageKit = new ImageKit({
   publicKey: process.env.IMAGEKIT_PUBLIC_KEY || "",
@@ -68,11 +69,13 @@ export async function POST(request: NextRequest) {
       throw new Error("ImageKit upload response was invalid.");
     }
 
+    const mimeType = lookup(uploadResponse.name) || 'application/octet-stream';
+
     const fileData = {
       name: uploadResponse.name,
       path: uploadResponse.filePath,
       size: uploadResponse.size,
-      type: file.type,
+      type: mimeType,
       fileUrl: uploadResponse.url,
       thumbnailUrl: uploadResponse.thumbnailUrl || null,
       fileIdInImageKit: uploadResponse.fileId,

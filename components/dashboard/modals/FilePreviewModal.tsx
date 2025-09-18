@@ -11,14 +11,18 @@ interface FilePreviewModalProps {
   onClose: () => void;
 }
 
-const getFileType = (mimeType: string): 'image' | 'pdf' | 'video' | 'audio' | 'text' | 'other' => {
+const getFileType = (mimeType: string | null): 'image' | 'pdf' | 'video' | 'audio' | 'text' | 'other' => {
+  if (!mimeType) return 'other';
+
   if (mimeType.startsWith('image/')) return 'image';
   if (mimeType === 'application/pdf') return 'pdf';
   if (mimeType.startsWith('video/')) return 'video';
   if (mimeType.startsWith('audio/')) return 'audio';
-  if (mimeType === 'text/plain') return 'text';
+  if (mimeType.startsWith('text/')) return 'text';
+
   return 'other';
 };
+
 
 const TextPreview = ({ fileUrl }: { fileUrl: string }) => {
   const [content, setContent] = useState('');
@@ -52,14 +56,16 @@ const TextPreview = ({ fileUrl }: { fileUrl: string }) => {
 
 export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ file, onClose }) => {
 
+  console.log("File received by preview modal:", file);
+
   useEffect(() => {
     // When the modal opens with a file, ping endpoint to update the timestamp.
     if (file) {
       fetch(`/api/files/${file.id}/access`, {
         method: 'PUT',
-      }).catch(console.error); // Log errors but don't block the UI
+      }).catch(console.error);
     }
-  }, [file]); // This effect runs whenever the `file` prop changes.
+  }, [file]);
 
   if (!file) {
     return null;
