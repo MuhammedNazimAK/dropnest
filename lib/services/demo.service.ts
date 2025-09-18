@@ -94,8 +94,6 @@ export async function resetDemoAccount() {
             return id !== null && id !== undefined && id !== '';
         });
 
-        console.log('[DEBUG] Attempting to delete these ImageKit file IDs:', validFileIdsToDelete);
-
         if (validFileIdsToDelete.length > 0) {
             await imageKitClient.bulkDeleteFiles(validFileIdsToDelete);
         }
@@ -136,6 +134,7 @@ async function seed(db: DrizzleDB, userId: string, items: readonly DemoItem[], p
                 fileIdInImageKit: '',
                 size: 0,
                 type: 'folder',
+                lastAccessedAt: null,
             });
 
             if (item.children) {
@@ -164,6 +163,7 @@ async function seed(db: DrizzleDB, userId: string, items: readonly DemoItem[], p
                 fileIdInImageKit: uploadResponse.fileId,
                 size: uploadResponse.size,
                 type: mimeType,
+                lastAccessedAt: null,
             });
         }
     }

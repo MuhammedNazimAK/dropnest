@@ -56,8 +56,6 @@ const TextPreview = ({ fileUrl }: { fileUrl: string }) => {
 
 export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ file, onClose }) => {
 
-  console.log("File received by preview modal:", file);
-
   useEffect(() => {
     // When the modal opens with a file, ping endpoint to update the timestamp.
     if (file) {
