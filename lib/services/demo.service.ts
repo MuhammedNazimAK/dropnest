@@ -39,14 +39,14 @@ const DEMO_STRUCTURE = [
             { name: "photo-2.jpg", type: "file", url: "https://ik.imagekit.io/f7zscmh4c/dropnest/user_32qMMrlaxPXmePcKCp0boe0lytI/pexels-abby-chung-371167-1191377_ppvfKoQxR.jpg?updatedAt=1758144818150" }
         ]
     },
-    // {
-    //     name: "Videos",
-    //     type: "folder",
-    //     children: [
-    //         { name: "beach-sunset.mp4", type: "file", url: "YOUR_BEACH_VIDEO_URL" },
-    //         { name: "mountain-hike.mov", type: "file", url: "YOUR_MOUNTAIN_VIDEO_URL" }
-    //     ]
-    // },
+    {
+        name: "Videos",
+        type: "folder",
+        children: [
+            { name: "cat.mp4", type: "file", url: "https://ik.imagekit.io/f7zscmh4c/dropnest/user_32qMMrlaxPXmePcKCp0boe0lytI/1436056-sd_960_480_30fps_D6AqkuC-iH.mp4?updatedAt=1758208855803" },
+            { name: "earth.mp4", type: "file", url: "https://ik.imagekit.io/f7zscmh4c/dropnest/user_32qMMrlaxPXmePcKCp0boe0lytI/file_example_MP4_640_3MG_iPlmNqczs.mp4?updatedAt=1758208856059" }
+        ]
+    },
     {
         name: "Music",
         type: "folder",

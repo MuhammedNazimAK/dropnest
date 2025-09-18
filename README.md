@@ -6,7 +6,7 @@ DropNest is a full-stack, Dropbox-inspired file storage application built for pe
 <p align="center">
 <a href="https-your-live-url.vercel.app">
 <!-- You can add a screenshot or a GIF of your app here! -->
-<img src="placeholder.gif" alt="DropNest Dashboard Preview" width="800">
+<img src="./public/dropnest_dashboard.png" alt="DropNest Dashboard Preview" width="800">
 </a>
 </p>
 
